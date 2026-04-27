@@ -22,8 +22,16 @@ const statusTone = (s: string): "emerald" | "amber" | "purple" | "slate" | "red"
 
 export default function ListingsPage() {
   const clients = useClients();
+  // Score-against only makes sense for clients still shopping for a home.
+  // Past clients (Closed) already bought; Active Sellers are listing, not
+  // buying. Tenants and applicants aren't agent-side buyers either.
+  const shoppingClients = clients.filter((c) =>
+    c.status !== "Closed" &&
+    c.status !== "Active Seller" &&
+    (c.type !== "Seller") // Buyer or Both, or unset
+  );
   const [forClientId, setForClientId] = useState<string>("");
-  const forClient = clients.find((c) => c.id === forClientId) ?? null;
+  const forClient = shoppingClients.find((c) => c.id === forClientId) ?? null;
 
   const active   = mlsListings.filter((l) => l.status === "Active");
   const pending  = mlsListings.filter((l) => l.status === "Pending");
@@ -41,11 +49,14 @@ export default function ListingsPage() {
           className="px-3 py-2 rounded-lg border border-line/80 bg-white text-sm text-ink focus:border-ink focus:outline-none"
         >
           <option value="">— Browse all listings —</option>
-          {clients.map((c) => (
+          {shoppingClients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.firstName} {c.lastName} · {c.status}
             </option>
           ))}
+          {shoppingClients.length === 0 && (
+            <option disabled>No active buyers yet</option>
+          )}
         </select>
         {forClient && (
           <Link

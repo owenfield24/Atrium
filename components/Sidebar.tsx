@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "@/lib/utils";
-import { loadProfile, saveProfile, useProfile } from "@/lib/profile";
+import { hasAgency, isAgent, isLandlord, loadProfile, saveProfile, useProfile } from "@/lib/profile";
 import { clearSession } from "@/lib/session";
 
 type IconName =
@@ -137,46 +137,55 @@ function Icon({ name }: { name: IconName }) {
   }
 }
 
-const AGENT_ITEMS: Item[] = [
-  { href: "/dashboard",    label: "Dashboard",    icon: "grid"      },
-  { href: "/brief",        label: "The Brief",    icon: "brief"     },
-  { href: "/listings",     label: "Listings",     icon: "home"      },
-  { href: "/clients",      label: "Clients",      icon: "users"     },
-  { href: "/transactions", label: "Deals",        icon: "briefcase" },
-  { href: "/keystone",     label: "Properties",   icon: "building"  },
-  { href: "/marketing",    label: "Marketing",    icon: "megaphone" },
-  { href: "/insights",     label: "Insights",     icon: "chart"     },
-  { href: "/team",         label: "Team",         icon: "user"      },
-  { href: "/integrations", label: "Integrations", icon: "plug"      },
-  { href: "/compliance",   label: "Compliance",   icon: "shield"    },
-  { href: "/billing",      label: "Billing",      icon: "card"      },
-  { href: "/settings",     label: "Settings",     icon: "cog"       },
-];
-
-const LANDLORD_ITEMS: Item[] = [
-  { href: "/dashboard",    label: "Dashboard",    icon: "grid"      },
-  { href: "/brief",        label: "Rental brief", icon: "brief"     },
-  { href: "/keystone",     label: "Properties",   icon: "building"  },
-  { href: "/clients",      label: "Tenants",      icon: "users"     },
-  { href: "/transactions", label: "Leases",       icon: "briefcase" },
-  { href: "/marketing",    label: "Marketing",    icon: "megaphone" },
-  { href: "/insights",     label: "Insights",     icon: "chart"     },
-  { href: "/integrations", label: "Integrations", icon: "plug"      },
-  { href: "/compliance",   label: "Compliance",   icon: "shield"    },
-  { href: "/billing",      label: "Billing",      icon: "card"      },
-  { href: "/settings",     label: "Settings",     icon: "cog"       },
-];
-
-const AGENCY_ITEMS: Item[] = AGENT_ITEMS;   // agencies see everything agents do, plus Team
+/** Build the sidebar item list for a given user. We compose from boolean
+ *  capabilities (agent / landlord / agency) instead of a fixed role enum so
+ *  "Both" users see everything they need without us hand-listing every
+ *  combination. */
+function buildItems(opts: { agent: boolean; landlord: boolean; agency: boolean }): Item[] {
+  const items: Item[] = [
+    { href: "/dashboard", label: "Dashboard", icon: "grid"  },
+    { href: "/brief",     label: opts.landlord && !opts.agent ? "Rental brief" : "The Brief", icon: "brief" },
+  ];
+  if (opts.agent) {
+    items.push(
+      { href: "/listings",     label: "Listings", icon: "home"      },
+      { href: "/transactions", label: "Deals",    icon: "briefcase" },
+    );
+  }
+  // Always show Clients/Tenants — relabel for landlord-only
+  items.push({
+    href: "/clients",
+    label: opts.landlord && !opts.agent ? "Tenants" : "Clients",
+    icon: "users",
+  });
+  if (opts.landlord) {
+    items.push({ href: "/keystone", label: "Properties", icon: "building" });
+  }
+  items.push(
+    { href: "/marketing", label: "Marketing", icon: "megaphone" },
+    { href: "/insights",  label: "Insights",  icon: "chart"     },
+  );
+  if (opts.agency) {
+    items.push({ href: "/team", label: "Team", icon: "user" });
+  }
+  items.push(
+    { href: "/integrations", label: "Integrations", icon: "plug"   },
+    { href: "/compliance",   label: "Compliance",   icon: "shield" },
+    { href: "/billing",      label: "Billing",      icon: "card"   },
+    { href: "/settings",     label: "Settings",     icon: "cog"    },
+  );
+  return items;
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const profile = useProfile();
-  const items =
-    profile?.role === "landlord"     ? LANDLORD_ITEMS :
-    profile?.role === "agent-agency" ? AGENCY_ITEMS   :
-    AGENT_ITEMS;
+  const items = buildItems({
+    agent:    isAgent(profile?.role),
+    landlord: isLandlord(profile?.role),
+    agency:   hasAgency(profile?.role),
+  });
 
   const onSignOut = (e: React.MouseEvent) => {
     e.preventDefault();

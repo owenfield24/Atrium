@@ -8,7 +8,7 @@ import { fmt, formatPhone } from "@/lib/utils";
 import { useClients, updateClient, removeClient } from "@/lib/clients-store";
 import { getTopMatches, type MatchResult } from "@/lib/clients-match";
 import { scoreLabel } from "@/lib/mls/matching";
-import { useProfile } from "@/lib/profile";
+import { isAgent, isLandlord as roleIsLandlord, useProfile } from "@/lib/profile";
 import PhotoUpload from "@/components/ui/PhotoUpload";
 import {
   Section, Row, TextField, NumberField, DateField,
@@ -34,7 +34,13 @@ export default function ClientDetailPage() {
     setDraft(client ?? null);
   }, [client?.id, client?.photo]);
 
-  const isLandlord = profile?.role === "landlord";
+  // "isLandlord" gates the tenant-style header / meta tiles. We only flip
+  // into landlord-only UI when the user has no agent activity at all —
+  // Both users keep the agent-style header but still get tenant sections
+  // rendered in the body via showLandlordSections below.
+  const showAgentSections    = isAgent(profile?.role);
+  const showLandlordSections = roleIsLandlord(profile?.role);
+  const isLandlord           = showLandlordSections && !showAgentSections;
 
   // Patch helper: most fields debounce by 350ms; photo writes immediately so
   // a quick navigation doesn't lose the upload.
@@ -287,8 +293,10 @@ export default function ClientDetailPage() {
             emphasis={isLandlord ? "tenant" : "client"}
           />
 
-          {/* ───── LANDLORD-ONLY SECTIONS ───── */}
-          {isLandlord && (
+          {/* ───── TENANT / LEASE SECTIONS ───── */}
+          {/* Shown for landlord users AND for "both" users so they can manage
+              tenants alongside their agent clients. */}
+          {showLandlordSections && (
             <>
               <Section eyebrow="Lease" title="Where they live and for how long.">
                 <Row label="Property address"><TextField value={draft.unitAddress ?? ""} onCommit={(v) => patch({ unitAddress: v })} /></Row>

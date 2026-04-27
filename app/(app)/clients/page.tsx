@@ -9,14 +9,17 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import PhotoUpload from "@/components/ui/PhotoUpload";
 import { useClients, addClient, removeClient } from "@/lib/clients-store";
-import { useProfile } from "@/lib/profile";
+import { isAgent, isLandlord as roleIsLandlord, useProfile } from "@/lib/profile";
 
 export default function ClientsPage() {
   const clients = useClients();
   const profile = useProfile();
   const [showAdd, setShowAdd] = useState(false);
 
-  const isLandlord = profile?.role === "landlord";
+  // Only treat as "landlord" UI when the user is *exclusively* a landlord —
+  // a Both user keeps the agent-style Clients labelling because they also
+  // have buyers/sellers in the book.
+  const isLandlord = roleIsLandlord(profile?.role) && !isAgent(profile?.role);
 
   const buyers   = clients.filter((c) => c.status === "Active Buyer");
   const sellers  = clients.filter((c) => c.status === "Active Seller");

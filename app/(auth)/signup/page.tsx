@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { saveProfile, type Role, type PlanId, type UserProfile } from "@/lib/profile";
+import { makeRole, saveProfile, type Role, type WorkType, type Affiliation, type PlanId, type UserProfile } from "@/lib/profile";
 import { setSession } from "@/lib/session";
 import { REGIONS } from "@/lib/brief/regions";
 import { pricingTiers } from "@/lib/saas/data";
@@ -25,27 +25,15 @@ const STEP_LABELS: Record<Step, string> = {
   6: "Verify",
 };
 
-const ROLES: { id: Role; title: string; blurb: string; svg: ReactNode }[] = [
+const WORK_TYPES: { id: WorkType; title: string; blurb: string; svg: ReactNode }[] = [
   {
-    id: "agent-solo",
-    title: "Solo agent",
-    blurb: "Independent, licensed, just you and your clients.",
+    id: "agent",
+    title: "Real estate agent",
+    blurb: "Licensed agent. You sell, buy, and represent clients.",
     svg: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8" r="4" />
         <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
-      </svg>
-    ),
-  },
-  {
-    id: "agent-agency",
-    title: "Agency / brokerage",
-    blurb: "You run or are part of a brokerage with multiple agents.",
-    svg: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M3 9h18M9 3v18" />
-        <path d="M13 13h2M13 17h2" />
       </svg>
     ),
   },
@@ -61,12 +49,27 @@ const ROLES: { id: Role; title: string; blurb: string; svg: ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    id: "both",
+    title: "Both",
+    blurb: "Licensed agent and you also own / manage rental properties.",
+    svg: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12l5-4 5 4v8H3z" />
+        <path d="M13 8h8v12h-8z" />
+        <path d="M16 14h2M16 17h2" />
+      </svg>
+    ),
+  },
 ];
 
-const PLAN_BY_ROLE: Record<Role, PlanId[]> = {
-  "agent-solo":   ["starter", "pro"],
-  "agent-agency": ["pro", "agency", "enterprise"],
-  "landlord":     ["agency"],
+const PLAN_BY_ROLE: Partial<Record<Role, PlanId[]>> = {
+  "agent-solo":      ["starter", "pro"],
+  "agent-agency":    ["pro", "agency", "enterprise"],
+  "landlord":        ["agency"],
+  "landlord-agency": ["agency", "scale"],
+  "both-solo":       ["pro", "agency"],
+  "both-agency":     ["agency", "enterprise"],
 };
 
 const PLAN_MAP: { id: PlanId; tierId: string }[] = [
@@ -81,7 +84,10 @@ export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
 
-  const [role, setRole]               = useState<Role | null>(null);
+  const [workType, setWorkType]       = useState<WorkType | null>(null);
+  const [affiliation, setAffiliation] = useState<Affiliation>("solo");
+  const role: Role | null = workType ? makeRole(workType, affiliation) : null;
+
   const [firstName, setFirstName]     = useState("");
   const [lastName, setLastName]       = useState("");
   const [email, setEmail]             = useState("");
@@ -114,7 +120,7 @@ export default function SignupPage() {
     []
   );
   const planOptions = useMemo(
-    () => (role ? PLAN_BY_ROLE[role] : []).map((id) => {
+    () => (role ? (PLAN_BY_ROLE[role] ?? []) : []).map((id) => {
       const tierId = PLAN_MAP.find((p) => p.id === id)?.tierId;
       const tier = pricingTiers.find((t) => t.id === tierId);
       return { id, tier };
@@ -125,14 +131,19 @@ export default function SignupPage() {
   const next = () => setStep((s) => Math.min(6, s + 1) as Step);
   const back = () => setStep((s) => Math.max(1, s - 1) as Step);
 
+  const needsAgent    = workType === "agent" || workType === "both";
+  const needsLandlord = workType === "landlord" || workType === "both";
+  const needsAgency   = affiliation === "agency";
+
   const canAdvance: Record<Step, boolean> = {
-    1: !!role,
+    1: !!workType,
     2: !!firstName && !!lastName && /.+@.+\..+/.test(email) && password.length >= 8 && phone.replace(/\D/g, "").length === 10,
     3: !!address && !!city && !!stateCode && !!regionSlug,
-    4: role === "agent-solo"   ? !!licenseNumber && licenseConfirmed
-     : role === "agent-agency" ? !!agencyName && !!agencyLicense && agencyAgentCount > 0
-     : role === "landlord"     ? doors > 0
-     : false,
+    4: (
+        (!needsAgent    || (!!licenseNumber && licenseConfirmed)) &&
+        (!needsLandlord || doors > 0) &&
+        (!needsAgency   || (!!agencyName && !!agencyLicense && agencyAgentCount > 0))
+       ),
     5: !!plan,
     6: verifyCode.length === 6,
   };
@@ -151,14 +162,14 @@ export default function SignupPage() {
       role: role!, plan,
       emailVerified: true,
       createdAt: new Date().toISOString(),
-      ...(role === "agent-solo" && {
+      ...(needsAgent && {
         agent: { licenseNumber, licenseState, brokerageName, licenseConfirmed },
       }),
-      ...(role === "agent-agency" && {
-        agency: { name: agencyName, license: agencyLicense, state: stateCode, agentCount: agencyAgentCount },
-      }),
-      ...(role === "landlord" && {
+      ...(needsLandlord && {
         landlord: { doors, propertyType },
+      }),
+      ...(needsAgency && {
+        agency: { name: agencyName, license: agencyLicense, state: stateCode, agentCount: agencyAgentCount },
       }),
     };
     saveProfile(profile);
@@ -239,16 +250,16 @@ export default function SignupPage() {
               <StepWrap
                 eyebrow="Step 01 / 06"
                 title="Who are you signing up as?"
-                subtitle="We'll tailor the dashboard, data, and reports to match."
+                subtitle="We'll tailor the dashboard, data, and reports to match. You can change this later in settings."
               >
                 <div className="space-y-2">
-                  {ROLES.map((r) => {
-                    const active = role === r.id;
+                  {WORK_TYPES.map((r) => {
+                    const active = workType === r.id;
                     return (
                       <button
                         key={r.id}
                         type="button"
-                        onClick={() => setRole(r.id)}
+                        onClick={() => setWorkType(r.id)}
                         className={`w-full text-left rounded-xl border px-5 py-4 flex items-center gap-4 transition group ${
                           active
                             ? "border-ink bg-white shadow-md ring-1 ring-ink/5"
@@ -273,6 +284,34 @@ export default function SignupPage() {
                     );
                   })}
                 </div>
+
+                {workType && (
+                  <div className="mt-6 rounded-xl border border-line bg-white p-5">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">Affiliation</p>
+                    <p className="mt-1 text-sm font-medium text-ink">Are you part of an agency or brokerage?</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {(["solo", "agency"] as const).map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setAffiliation(opt)}
+                          className={`rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                            affiliation === opt
+                              ? "border-ink bg-ink text-white"
+                              : "border-line bg-white text-ink hover:border-ink/40"
+                          }`}
+                        >
+                          {opt === "solo" ? "Solo / independent" : "Yes — at an agency"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[11px] text-mute leading-relaxed">
+                      {affiliation === "agency"
+                        ? "You'll see Team management for splits, caps, and seats in your dashboard."
+                        : "Solo dashboards skip Team — fewer tabs, just what you need."}
+                    </p>
+                  </div>
+                )}
               </StepWrap>
             )}
 
@@ -338,71 +377,81 @@ export default function SignupPage() {
               </StepWrap>
             )}
 
-            {step === 4 && role === "agent-solo" && (
+            {step === 4 && (
               <StepWrap
                 eyebrow="Step 04 / 06"
-                title="Your license."
-                subtitle="We use this to populate compliance reports and verify you against the state registry."
+                title="Your credentials."
+                subtitle={
+                  needsAgent && needsLandlord
+                    ? "We need your license and a quick summary of your portfolio."
+                    : needsAgent
+                      ? "We use this to populate compliance reports and verify you against the state registry."
+                      : "A starting estimate is fine. You can refine doors, units, and tenants once you're in."
+                }
               >
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="License number"><Input value={licenseNumber} onChange={setLicenseNumber} placeholder="0612345" /></Field>
-                  <Field label="License state"><Select value={licenseState} onChange={setLicenseState} options={US_STATES.map((s) => ({ value: s, label: s }))} /></Field>
-                  <Field label="Sponsoring brokerage" className="md:col-span-2">
-                    <Input value={brokerageName} onChange={setBrokerageName} placeholder="Atrium Realty Group" />
-                  </Field>
-                  <label className="md:col-span-2 mt-1 flex items-start gap-3 text-sm text-mute cursor-pointer p-4 rounded-xl border border-line bg-white hover:border-ink/30 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={licenseConfirmed}
-                      onChange={(e) => setLicenseConfirmed(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-line accent-amber-600"
-                    />
-                    <span className="leading-relaxed">
-                      <span className="text-ink font-medium">I confirm</span> the license info above is mine and I am an actively-licensed real estate agent in good standing.
-                      <span className="block text-[11px] text-mute mt-1">Verification runs against the state license registry on first sign-in. Misrepresentation violates our terms.</span>
-                    </span>
-                  </label>
-                </div>
-              </StepWrap>
-            )}
+                <div className="space-y-6">
+                  {/* Agent block */}
+                  {needsAgent && (
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute mb-3">Real estate license</p>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Field label="License number"><Input value={licenseNumber} onChange={setLicenseNumber} placeholder="0612345" /></Field>
+                        <Field label="License state"><Select value={licenseState} onChange={setLicenseState} options={US_STATES.map((s) => ({ value: s, label: s }))} /></Field>
+                        <Field label="Sponsoring brokerage" className="md:col-span-2">
+                          <Input value={brokerageName} onChange={setBrokerageName} placeholder="Atrium Realty Group" />
+                        </Field>
+                        <label className="md:col-span-2 mt-1 flex items-start gap-3 text-sm text-mute cursor-pointer p-4 rounded-xl border border-line bg-white hover:border-ink/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={licenseConfirmed}
+                            onChange={(e) => setLicenseConfirmed(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-line accent-amber-600"
+                          />
+                          <span className="leading-relaxed">
+                            <span className="text-ink font-medium">I confirm</span> the license info above is mine and I am an actively-licensed real estate agent in good standing.
+                            <span className="block text-[11px] text-mute mt-1">Verification runs against the state license registry on first sign-in.</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
-            {step === 4 && role === "agent-agency" && (
-              <StepWrap
-                eyebrow="Step 04 / 06"
-                title="Agency details."
-                subtitle="So seats, splits, and compliance route correctly across the brokerage."
-              >
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="Agency name" className="md:col-span-2"><Input value={agencyName} onChange={setAgencyName} placeholder="Atrium Realty Group" /></Field>
-                  <Field label="Brokerage license #"><Input value={agencyLicense} onChange={setAgencyLicense} placeholder="9001234" /></Field>
-                  <Field label="Number of agents">
-                    <Input value={String(agencyAgentCount)} onChange={(v) => setAgencyAgentCount(Math.max(1, Number(v) || 1))} type="number" />
-                  </Field>
-                </div>
-              </StepWrap>
-            )}
+                  {/* Landlord block */}
+                  {needsLandlord && (
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute mb-3">Your rental portfolio</p>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Field label="Number of doors / units">
+                          <Input value={String(doors)} onChange={(v) => setDoors(Math.max(1, Number(v) || 1))} type="number" />
+                        </Field>
+                        <Field label="Primary property type">
+                          <Select
+                            value={propertyType}
+                            onChange={(v) => setPropertyType(v as typeof propertyType)}
+                            options={[
+                              { value: "residential", label: "Residential" },
+                              { value: "commercial",  label: "Commercial"  },
+                              { value: "mixed",       label: "Mixed"       },
+                            ]}
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  )}
 
-            {step === 4 && role === "landlord" && (
-              <StepWrap
-                eyebrow="Step 04 / 06"
-                title="Your portfolio."
-                subtitle="A starting estimate is fine. You can refine doors, units, and tenants once you're in."
-              >
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="Number of doors / units">
-                    <Input value={String(doors)} onChange={(v) => setDoors(Math.max(1, Number(v) || 1))} type="number" />
-                  </Field>
-                  <Field label="Primary property type">
-                    <Select
-                      value={propertyType}
-                      onChange={(v) => setPropertyType(v as typeof propertyType)}
-                      options={[
-                        { value: "residential", label: "Residential" },
-                        { value: "commercial",  label: "Commercial"  },
-                        { value: "mixed",       label: "Mixed"       },
-                      ]}
-                    />
-                  </Field>
+                  {/* Agency block */}
+                  {needsAgency && (
+                    <div>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute mb-3">Agency / brokerage</p>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Field label="Agency name" className="md:col-span-2"><Input value={agencyName} onChange={setAgencyName} placeholder="Atrium Realty Group" /></Field>
+                        <Field label="Brokerage license #"><Input value={agencyLicense} onChange={setAgencyLicense} placeholder="9001234" /></Field>
+                        <Field label="Number of agents">
+                          <Input value={String(agencyAgentCount)} onChange={(v) => setAgencyAgentCount(Math.max(1, Number(v) || 1))} type="number" />
+                        </Field>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </StepWrap>
             )}
