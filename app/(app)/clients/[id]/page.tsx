@@ -1,40 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Client } from "@/types";
 import { fmt, formatPhone } from "@/lib/utils";
-import { updateClient } from "@/lib/clients-store";
+import { useClients, updateClient, removeClient } from "@/lib/clients-store";
 import { getTopMatches, type MatchResult } from "@/lib/clients-match";
 import { scoreLabel } from "@/lib/mls/matching";
+import PhotoUpload from "@/components/ui/PhotoUpload";
 import {
   Section, Row, TextField, NumberField, DateField,
   SelectField, ToggleField, ChipsField,
 } from "@/components/ui/InlineFields";
 
-interface Props {
-  client: Client | null;
-  onClose: () => void;
-}
+export default function ClientDetailPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const clients = useClients();
+  const client = clients.find((c) => c.id === params.id);
 
-export default function ClientDrawer({ client, onClose }: Props) {
-  const [draft, setDraft]     = useState<Client | null>(client);
+  const [draft, setDraft]     = useState<Client | null>(client ?? null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const debounce              = useRef<number | null>(null);
 
-  // Reset draft when a different client is opened
+  // Reset draft when params change or seeded data first loads
   useEffect(() => {
-    setDraft(client);
-    setSavedAt(null);
+    setDraft(client ?? null);
   }, [client?.id]);
 
-  // Esc closes
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    if (client) document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [client, onClose]);
-
-  // Single patch helper — updates draft immediately and writes through after a short debounce
+  // Single patch helper — local state, then write-through after debounce
   const patch = (next: Partial<Client>) => {
     setDraft((d) => (d ? { ...d, ...next } : d));
     if (!client) return;
@@ -45,64 +40,84 @@ export default function ClientDrawer({ client, onClose }: Props) {
     }, 350);
   };
 
-  // Top-5 matches recompute against the draft, so users see them react live
+  // Top-5 matches recompute against the draft
   const matches: MatchResult[] = useMemo(() => {
     if (!draft) return [];
     return getTopMatches(draft, 5);
   }, [draft]);
 
-  if (!client || !draft) return null;
+  if (!client || !draft) {
+    return (
+      <div className="max-w-3xl mx-auto pt-16 pb-24">
+        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-700">Clients</p>
+        <h1 className="mt-3 text-3xl font-semibold tighter">Client not found.</h1>
+        <p className="mt-3 text-sm text-mute">This client may have been removed.</p>
+        <Link href="/clients" className="mt-6 inline-block text-sm font-medium text-ink underline-offset-4 hover:underline">
+          ← Back to clients
+        </Link>
+      </div>
+    );
+  }
 
   const isBuyer  = draft.type === "Buyer"  || draft.type === "Both";
   const isSeller = draft.type === "Seller" || draft.type === "Both";
 
   return (
-    <>
-      <div onClick={onClose} className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" />
-      <aside
-        className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-2xl bg-white shadow-2xl shadow-black/30 flex flex-col"
-        style={{ animation: "atrium-slide-in 280ms cubic-bezier(0.2, 0, 0.13, 1.5)" }}
-      >
-        <style>{`
-          @keyframes atrium-slide-in {
-            from { transform: translateX(40px); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
-          }
-        `}</style>
+    <div className="max-w-5xl mx-auto pt-10 pb-24">
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/clients" className="text-sm font-medium text-mute hover:text-ink">
+          ← All clients
+        </Link>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-mono text-mute">
+            {savedAt ? `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Auto-saves as you type"}
+          </span>
+          <button
+            onClick={() => {
+              if (confirm(`Remove ${draft.firstName} ${draft.lastName}?`)) {
+                removeClient(draft.id);
+                router.push("/clients");
+              }
+            }}
+            className="text-xs font-medium text-mute hover:text-rose-600 px-3 py-1.5 rounded-full hover:bg-rose-50"
+          >
+            Remove client
+          </button>
+        </div>
+      </div>
 
-        {/* HEADER */}
-        <header className="px-7 py-5 border-b border-line flex items-start justify-between gap-4 flex-shrink-0">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-full bg-ink text-amber-400 font-bold text-base flex items-center justify-center flex-shrink-0">
-              {draft.firstName[0]}{draft.lastName[0]}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">{draft.status}</p>
-              <h2 className="mt-1 text-2xl font-semibold tighter leading-tight">{draft.firstName} {draft.lastName}</h2>
-              <p className="mt-1 text-xs text-mute truncate">
-                {draft.email && <span>{draft.email}</span>}
-                {draft.email && draft.phone && <span className="mx-2 text-mute/50">·</span>}
-                {draft.phone && <span className="font-mono">{draft.phone}</span>}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="text-[10px] font-mono text-mute">
-              {savedAt ? `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Auto-saves"}
-            </span>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="text-mute hover:text-ink text-2xl leading-none w-9 h-9 rounded-full hover:bg-soft flex items-center justify-center"
-            >
-              ×
-            </button>
-          </div>
-        </header>
+      {/* HEADER — photo + name + contact */}
+      <header className="mt-8 flex items-start gap-7">
+        <PhotoUpload
+          size="lg"
+          value={draft.photo}
+          initials={`${draft.firstName?.[0] ?? ""}${draft.lastName?.[0] ?? ""}`}
+          onChange={(dataUrl) => patch({ photo: dataUrl })}
+        />
+        <div className="flex-1 min-w-0 pt-2">
+          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-700">{draft.status}</p>
+          <h1 className="mt-2 text-5xl md:text-6xl font-semibold tighter leading-[0.95]">
+            {draft.firstName} {draft.lastName}
+          </h1>
+          <p className="mt-3 text-sm text-mute">
+            {draft.email && <span>{draft.email}</span>}
+            {draft.email && draft.phone && <span className="mx-2 text-mute/50">·</span>}
+            {draft.phone && <span className="font-mono">{draft.phone}</span>}
+          </p>
+        </div>
+      </header>
 
-        {/* BODY */}
-        <div className="flex-1 overflow-y-auto px-7 py-6">
-          {/* IDENTITY */}
+      {/* META TILES */}
+      <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetaTile label="Type"          value={draft.type ?? "—"} />
+        <MetaTile label="Budget"        value={draft.budgetMax ?? draft.budget ? fmt((draft.budgetMax ?? draft.budget)!) : "—"} mono />
+        <MetaTile label="Source"        value={draft.source ?? "—"} />
+        <MetaTile label="Last contact"  value={draft.lastContact ? new Date(draft.lastContact).toLocaleDateString() : "—"} mono />
+      </div>
+
+      {/* TWO-COLUMN BODY */}
+      <div className="mt-10 grid lg:grid-cols-[1fr_360px] gap-10">
+        <div>
           <Section eyebrow="Identity">
             <Row label="First name"><TextField value={draft.firstName ?? ""} onCommit={(v) => patch({ firstName: v })} /></Row>
             <Row label="Last name"><TextField value={draft.lastName ?? ""} onCommit={(v) => patch({ lastName: v })} /></Row>
@@ -112,7 +127,6 @@ export default function ClientDrawer({ client, onClose }: Props) {
             </Row>
           </Section>
 
-          {/* STATUS */}
           <Section eyebrow="Status & relationship">
             <Row label="Status">
               <SelectField
@@ -139,24 +153,22 @@ export default function ClientDrawer({ client, onClose }: Props) {
               />
             </Row>
             <Row label="Source"><TextField value={draft.source ?? ""} onCommit={(v) => patch({ source: v })} placeholder="Referral, Open House, Zillow…" /></Row>
-            <Row label="Referred by"><TextField value={draft.referredBy ?? ""} onCommit={(v) => patch({ referredBy: v })} placeholder="Name of the person who introduced them" /></Row>
-            <Row label="Tags" hint="Free-form. Press Enter to add.">
-              <ChipsField value={draft.tags} onCommit={(v) => patch({ tags: v })} placeholder="VIP, Repeat, Investor…" />
+            <Row label="Referred by"><TextField value={draft.referredBy ?? ""} onCommit={(v) => patch({ referredBy: v })} placeholder="Name of the introducer" /></Row>
+            <Row label="Tags" hint="Press Enter to add a tag.">
+              <ChipsField value={draft.tags} onCommit={(v) => patch({ tags: v })} placeholder="VIP, Investor, Repeat…" />
             </Row>
           </Section>
 
-          {/* NOTES */}
           <Section eyebrow="Notes" title="What you'd want a co-agent to know after one read.">
             <textarea
               value={draft.notes ?? ""}
               onChange={(e) => patch({ notes: e.target.value })}
-              rows={5}
+              rows={6}
               placeholder={"Mention budget (e.g. $900k), bedrooms (4 bed), preferred area (78731, Westlake), and must-haves (pool, smart home). Matching uses these signals."}
-              className="w-full px-4 py-3 rounded-xl border border-line bg-soft/40 text-sm text-ink leading-relaxed focus:border-ink focus:bg-white focus:outline-none placeholder:text-mute/60 resize-y min-h-[120px]"
+              className="w-full px-4 py-3 rounded-xl border border-line bg-soft/40 text-sm text-ink leading-relaxed focus:border-ink focus:bg-white focus:outline-none placeholder:text-mute/60 resize-y min-h-[140px]"
             />
           </Section>
 
-          {/* BUYING PREFERENCES */}
           {isBuyer && (
             <Section eyebrow="Buying preferences" title="Used by the matcher.">
               <Row label="Budget">
@@ -168,7 +180,7 @@ export default function ClientDrawer({ client, onClose }: Props) {
               </Row>
               <Row label="Min bedrooms"><NumberField value={draft.preferences?.minBedrooms ?? null} onCommit={(v) => patch({ preferences: { ...(draft.preferences ?? emptyPrefs()), minBedrooms: v ?? 0 } })} placeholder="3" /></Row>
               <Row label="Min bathrooms"><NumberField value={draft.preferences?.minBathrooms ?? null} onCommit={(v) => patch({ preferences: { ...(draft.preferences ?? emptyPrefs()), minBathrooms: v ?? 0 } })} placeholder="2" /></Row>
-              <Row label="Property types" hint="Comma-separated; e.g. Single Family, Condo">
+              <Row label="Property types" hint="e.g. Single Family, Condo">
                 <ChipsField value={draft.preferences?.preferredTypes as string[] | undefined} onCommit={(v) => patch({ preferences: { ...(draft.preferences ?? emptyPrefs()), preferredTypes: v as any } })} placeholder="Single Family, Condo…" />
               </Row>
               <Row label="Cities">
@@ -197,16 +209,13 @@ export default function ClientDrawer({ client, onClose }: Props) {
                   ]}
                 />
               </Row>
-              <Row label="Motivation"><TextField value={draft.motivation ?? ""} onCommit={(v) => patch({ motivation: v })} placeholder="Relocating for work, growing family…" /></Row>
+              <Row label="Motivation"><TextField value={draft.motivation ?? ""} onCommit={(v) => patch({ motivation: v })} placeholder="Relocating, growing family…" /></Row>
             </Section>
           )}
 
-          {/* PRE-APPROVAL */}
           {isBuyer && (
             <Section eyebrow="Pre-approval">
-              <Row label="Pre-approved">
-                <ToggleField value={!!draft.preApproved} onCommit={(v) => patch({ preApproved: v })} />
-              </Row>
+              <Row label="Pre-approved"><ToggleField value={!!draft.preApproved} onCommit={(v) => patch({ preApproved: v })} /></Row>
               {draft.preApproved && (
                 <>
                   <Row label="Lender"><TextField value={draft.preApprovalLender ?? ""} onCommit={(v) => patch({ preApprovalLender: v })} placeholder="First Texas Bank" /></Row>
@@ -217,10 +226,9 @@ export default function ClientDrawer({ client, onClose }: Props) {
             </Section>
           )}
 
-          {/* SELLING */}
           {isSeller && (
             <Section eyebrow="Selling">
-              <Row label="Property address"><TextField value={draft.sellingAddress ?? ""} onCommit={(v) => patch({ sellingAddress: v })} placeholder="4821 Westbrook Ln" /></Row>
+              <Row label="Property address"><TextField value={draft.sellingAddress ?? ""} onCommit={(v) => patch({ sellingAddress: v })} /></Row>
               <Row label="Target price"><NumberField currency value={draft.sellingTargetPrice ?? null} onCommit={(v) => patch({ sellingTargetPrice: v ?? undefined })} /></Row>
               <Row label="Timeline">
                 <SelectField
@@ -235,11 +243,10 @@ export default function ClientDrawer({ client, onClose }: Props) {
                   ]}
                 />
               </Row>
-              <Row label="Motivation"><TextField value={draft.sellingMotivation ?? ""} onCommit={(v) => patch({ sellingMotivation: v })} placeholder="Job relocation, downsizing, upgrading…" multiline /></Row>
+              <Row label="Motivation"><TextField multiline value={draft.sellingMotivation ?? ""} onCommit={(v) => patch({ sellingMotivation: v })} /></Row>
             </Section>
           )}
 
-          {/* COMMUNICATION */}
           <Section eyebrow="Communication">
             <Row label="Preferred method">
               <SelectField
@@ -270,34 +277,31 @@ export default function ClientDrawer({ client, onClose }: Props) {
             <Row label="Next follow-up"><DateField value={draft.nextFollowUp} onCommit={(v) => patch({ nextFollowUp: v })} /></Row>
           </Section>
 
-          {/* PEOPLE */}
           <Section eyebrow="People">
             <Row label="Spouse"><TextField value={draft.spouseName ?? ""} onCommit={(v) => patch({ spouseName: v })} /></Row>
-            <Row label="Children" hint="Names only — keep it light.">
+            <Row label="Children" hint='e.g. "Emma (8), Liam (5)"'>
               <ChipsField
                 value={draft.children?.map((c) => (c.age ? `${c.name} (${c.age})` : c.name))}
                 onCommit={(v) => patch({ children: v.map((s) => {
                   const m = s.match(/^(.*?)\s*\((\d+)\)\s*$/);
                   return m ? { name: m[1].trim(), age: parseInt(m[2], 10) } : { name: s };
                 }) })}
-                placeholder="Emma (8), Liam (5)"
               />
             </Row>
-            <Row label="Occupation"><TextField value={draft.occupation ?? ""} onCommit={(v) => patch({ occupation: v })} placeholder="Software engineer" /></Row>
-            <Row label="Employer"><TextField value={draft.employer ?? ""} onCommit={(v) => patch({ employer: v })} placeholder="Dell, Google, self-employed…" /></Row>
+            <Row label="Occupation"><TextField value={draft.occupation ?? ""} onCommit={(v) => patch({ occupation: v })} /></Row>
+            <Row label="Employer"><TextField value={draft.employer ?? ""} onCommit={(v) => patch({ employer: v })} /></Row>
           </Section>
 
-          {/* DATES */}
           <Section eyebrow="Important dates">
             <Row label="Birthday"><DateField value={draft.birthday} onCommit={(v) => patch({ birthday: v })} /></Row>
             <Row label="Anniversary"><DateField value={draft.anniversary} onCommit={(v) => patch({ anniversary: v })} /></Row>
             <Row label="Contract date"><DateField value={draft.contractDate} onCommit={(v) => patch({ contractDate: v })} /></Row>
           </Section>
+        </div>
 
-          {/* MATCHES */}
-          <Section eyebrow="Top 5 matches" title="Listings ranked against this profile." action={
-            <span className="text-[10px] font-mono text-mute">Recomputes live</span>
-          }>
+        {/* RIGHT COLUMN — sticky matches */}
+        <aside className="lg:sticky lg:top-10 self-start">
+          <Section eyebrow="Top 5 matches" title="Listings ranked against this profile.">
             {matches.length === 0 ? (
               <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-mute">
                 Add buying preferences to see matches.
@@ -308,41 +312,48 @@ export default function ClientDrawer({ client, onClose }: Props) {
                   const sLabel = scoreLabel(m.total);
                   return (
                     <li key={m.listing.mlsId} className="rounded-xl border border-line bg-white p-4 hover:border-ink/30 transition-colors">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-mono text-mute w-5">{String(i + 1).padStart(2, "0")}</span>
-                            <span className="text-base font-semibold text-ink truncate">{m.listing.address}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-mute">#{String(i + 1).padStart(2, "0")}</span>
+                            <span className="text-sm font-semibold text-ink truncate">{m.listing.address}</span>
                           </div>
-                          <p className="mt-1 ml-8 text-xs text-mute">
-                            {m.listing.city} · {m.listing.state} {m.listing.zip} ·{" "}
-                            <span className="font-mono">{m.listing.bedrooms} bd / {m.listing.bathrooms} ba / {m.listing.sqft.toLocaleString()} sf</span>
+                          <p className="mt-1 text-[11px] text-mute">
+                            {m.listing.city} · {m.listing.zip} · <span className="font-mono">{m.listing.bedrooms}bd/{m.listing.bathrooms}ba</span>
                           </p>
-                          {m.reasons.length > 0 && (
-                            <ul className="mt-2 ml-8 flex flex-wrap gap-x-3 gap-y-1">
-                              {m.reasons.map((r) => (
-                                <li key={r} className="text-[11px] text-mute">· {r}</li>
-                              ))}
-                            </ul>
-                          )}
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="text-xl font-mono font-semibold text-ink">{fmt(m.listing.listPrice)}</p>
-                          <div className={`mt-1 inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider ${sLabel.color}`}>
-                            <span className="font-bold">{m.total}</span>
-                            <span>· {sLabel.label}</span>
+                          <p className="text-sm font-mono font-semibold text-ink">{fmt(m.listing.listPrice)}</p>
+                          <div className={`mt-0.5 text-[10px] font-mono uppercase tracking-wider ${sLabel.color}`}>
+                            <span className="font-bold">{m.total}</span> · {sLabel.label}
                           </div>
                         </div>
                       </div>
+                      {m.reasons.length > 0 && (
+                        <ul className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5">
+                          {m.reasons.slice(0, 2).map((r) => (
+                            <li key={r} className="text-[10px] text-mute">· {r}</li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}
               </ol>
             )}
           </Section>
-        </div>
-      </aside>
-    </>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function MetaTile({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-xl bg-soft/60 border border-line/60 px-4 py-3">
+      <p className="text-[10px] font-mono uppercase tracking-wider text-mute">{label}</p>
+      <p className={`mt-1 text-base text-ink ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
   );
 }
 

@@ -103,6 +103,9 @@ export interface Client {
 
   // Free-form organization
   tags?: string[];
+
+  // Photo (data URL, compressed locally before save)
+  photo?: string;
 }
 
 export interface MatchScore {

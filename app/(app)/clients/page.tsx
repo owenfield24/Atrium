@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Client } from "@/types";
 import { fmt, formatPhone } from "@/lib/utils";
 import { Tabs } from "@/components/ui/Tabs";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import PhotoUpload from "@/components/ui/PhotoUpload";
 import { useClients, addClient, removeClient } from "@/lib/clients-store";
-import ClientDrawer from "./ClientDrawer";
 
 export default function ClientsPage() {
   const clients = useClients();
   const [showAdd, setShowAdd] = useState(false);
-  const [openClientId, setOpenClientId] = useState<string | null>(null);
-  const openClient = openClientId ? clients.find((c) => c.id === openClientId) ?? null : null;
 
   const buyers   = clients.filter((c) => c.status === "Active Buyer");
   const sellers  = clients.filter((c) => c.status === "Active Seller");
@@ -48,17 +47,18 @@ export default function ClientsPage() {
       >
         {(active) => {
           const list = ({ all: clients, buyers, sellers, leads, past, nurture } as Record<string, Client[]>)[active] ?? clients;
-          return <ClientList list={list} onRemove={removeClient} onOpen={setOpenClientId} />;
+          return <ClientList list={list} onRemove={removeClient} />;
         }}
       </Tabs>
 
       {showAdd && <AddClientModal onClose={() => setShowAdd(false)} />}
-      <ClientDrawer client={openClient} onClose={() => setOpenClientId(null)} />
     </div>
   );
 }
 
-function ClientList({ list, onRemove, onOpen }: { list: Client[]; onRemove: (id: string) => void; onOpen: (id: string) => void }) {
+function ClientList({ list, onRemove }: { list: Client[]; onRemove: (id: string) => void }) {
+  const router = useRouter();
+
   if (list.length === 0)
     return <Card><p className="text-sm text-slate-500">No clients in this view.</p></Card>;
 
@@ -88,13 +88,17 @@ function ClientList({ list, onRemove, onOpen }: { list: Client[]; onRemove: (id:
           {list.map((c) => (
             <tr
               key={c.id}
-              onClick={() => onOpen(c.id)}
+              onClick={() => router.push(`/clients/${c.id}`)}
               className="hover:bg-slate-50 group cursor-pointer"
             >
               <td className="px-5 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-900 text-amber-400 font-bold text-xs flex items-center justify-center">
-                    {c.firstName[0]}{c.lastName[0]}
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-900 text-amber-400 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                    {c.photo ? (
+                      <img src={c.photo} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{c.firstName[0]}{c.lastName[0]}</span>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-slate-900">{c.firstName} {c.lastName}</p>
@@ -131,6 +135,8 @@ function ClientList({ list, onRemove, onOpen }: { list: Client[]; onRemove: (id:
 
 // ── Add-client modal ─────────────────────────────────────────────────────
 function AddClientModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [photo, setPhoto]         = useState<string>("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName]   = useState("");
   const [email, setEmail]         = useState("");
@@ -141,9 +147,9 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
   const [source, setSource]       = useState("Referral");
   const [notes, setNotes]         = useState("");
 
-  const submit = () => {
+  const submit = (openAfter: boolean) => {
     if (!firstName || !lastName) return;
-    addClient({
+    const created = addClient({
       firstName, lastName,
       email: email || null,
       phone: phone || null,
@@ -155,13 +161,15 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
       notes,
       lastContact: new Date().toISOString().slice(0, 10),
       source,
+      photo: photo || undefined,
     } as Omit<Client, "id" | "createdAt">);
     onClose();
+    if (openAfter) router.push(`/clients/${created.id}`);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-3xl border border-line shadow-2xl shadow-black/20 overflow-hidden">
+      <div className="bg-white w-full max-w-xl rounded-3xl border border-line shadow-2xl shadow-black/20 overflow-hidden">
         <div className="px-7 pt-6 pb-4 border-b border-line flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600">Add client</p>
@@ -169,7 +177,15 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-ink text-2xl leading-none">×</button>
         </div>
-        <div className="px-7 py-6 space-y-4">
+        <div className="px-7 py-6 space-y-5">
+          {/* PHOTO */}
+          <PhotoUpload
+            value={photo}
+            initials={`${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase() || "•"}
+            onChange={setPhoto}
+            size="md"
+          />
+
           <div className="grid grid-cols-2 gap-3">
             <ModalField label="First name"><ModalInput value={firstName} onChange={setFirstName} placeholder="Jennifer" autoFocus /></ModalField>
             <ModalField label="Last name"><ModalInput value={lastName} onChange={setLastName} placeholder="Walsh" /></ModalField>
@@ -216,10 +232,17 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="text-sm font-medium text-mute hover:text-ink px-3 py-2 rounded-full">Cancel</button>
           <button
             disabled={!firstName || !lastName}
-            onClick={submit}
+            onClick={() => submit(false)}
+            className="text-sm font-medium text-ink px-5 py-2.5 rounded-full hover:bg-soft disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Save
+          </button>
+          <button
+            disabled={!firstName || !lastName}
+            onClick={() => submit(true)}
             className="bg-ink text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-mute disabled:bg-line disabled:text-mute/70 disabled:cursor-not-allowed"
           >
-            Add to clients
+            Save & open profile
           </button>
         </div>
       </div>
