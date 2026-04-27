@@ -143,7 +143,7 @@ function Icon({ name }: { name: IconName }) {
  *  combination. */
 function buildItems(opts: { agent: boolean; landlord: boolean; agency: boolean }): Item[] {
   const items: Item[] = [
-    { href: "/dashboard", label: "Dashboard", icon: "grid"  },
+    { href: "/dashboard", label: "Home", icon: "grid"  },
     { href: "/brief",     label: opts.landlord && !opts.agent ? "Rental brief" : "The Brief", icon: "brief" },
   ];
   if (opts.agent) {

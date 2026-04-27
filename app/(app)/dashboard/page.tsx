@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { dashboardStats } from "@/lib/mls/data";
 import { transactions, mlsConnections } from "@/lib/saas/data";
 import { fmtCompact } from "@/lib/utils";
@@ -46,32 +45,6 @@ export default function DashboardPage() {
         </figure>
       </section>
 
-      {/* ROLE-AWARE QUICK ACTIONS */}
-      <section className="mt-16">
-        <p className="text-xs font-bold uppercase tracking-widest text-amber-600">Quick actions</p>
-        <h2 className="mt-2 text-4xl font-semibold tighter">
-          {role === "landlord" ? "Manage your portfolio." : "Where do you want to go next?"}
-        </h2>
-        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {(role === "agent-solo"   ? SOLO_ACTIONS    :
-            role === "agent-agency" ? AGENCY_ACTIONS  :
-            LANDLORD_ACTIONS).map((s) => (
-            <Link
-              key={s.title}
-              href={s.href}
-              className="group relative rounded-2xl bg-white border border-line p-5 hover:shadow-lg hover:shadow-amber-200/40 hover:border-amber-400/60 transition"
-            >
-              <span className="absolute left-5 top-0 h-0.5 w-10 bg-amber-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">{s.tag}</p>
-              <p className="mt-2 text-base font-semibold text-ink">{s.title}</p>
-              <p className="mt-1 text-sm text-mute leading-relaxed">{s.desc}</p>
-              <p className="mt-3 text-xs font-semibold text-amber-700 group-hover:text-amber-800">
-                Open <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
@@ -161,25 +134,3 @@ function BigStatDark({ label, value, suffix, sub }: { label: string; value: stri
     </div>
   );
 }
-
-// ── Role action sets ────────────────────────────────────────────────────
-const SOLO_ACTIONS = [
-  { tag: "Clients",  title: "Add a client",       desc: "Drop in a new buyer, seller, or lead.", href: "/clients"     },
-  { tag: "Brief",    title: "Today's market",     desc: "National + your region in 30 seconds.",  href: "/brief"       },
-  { tag: "Deals",    title: "Pipeline",            desc: "Buyer + seller stages on one board.",   href: "/transactions" },
-  { tag: "Marketing",title: "Send the Brief",      desc: "Push the daily Brief to your sphere.",  href: "/marketing"   },
-];
-
-const AGENCY_ACTIONS = [
-  { tag: "Team",     title: "Splits and caps",    desc: "Who's on track, who needs a nudge.",     href: "/team"        },
-  { tag: "Brief",    title: "Today's market",     desc: "National + each agent's region.",         href: "/brief"       },
-  { tag: "Clients",  title: "Add a client",        desc: "Assigned to an agent on your team.",     href: "/clients"     },
-  { tag: "Compliance",title: "Audit log",          desc: "File completeness across all deals.",    href: "/compliance"  },
-];
-
-const LANDLORD_ACTIONS = [
-  { tag: "Properties", title: "Add a property",    desc: "Building → unit → tenant in 30 seconds.", href: "/keystone"    },
-  { tag: "Brief",      title: "Rental market",     desc: "Rent comps and supply for your region.",  href: "/brief"       },
-  { tag: "Tenants",    title: "Lease tracking",    desc: "Renewals, deposits, insurance.",          href: "/keystone"    },
-  { tag: "Maintenance",title: "Open tickets",      desc: "Vendors and repairs in one queue.",       href: "/keystone"    },
-];
