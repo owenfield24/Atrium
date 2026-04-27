@@ -33,22 +33,16 @@ export default function DashboardPage() {
       {role === "agent-agency" && <AgencyHero       agency={profile?.agency} clients={clients} />}
       {role === "landlord"     && <LandlordHero     landlord={profile?.landlord} />}
 
-      {/* DAILY QUOTE — minimal, monochrome, with a single thin accent rule */}
+      {/* DAILY QUOTE — editorial pull-quote: amber rule, italic, no card chrome */}
       <section className="mt-16">
-        <figure className="relative rounded-2xl bg-gradient-to-br from-ink via-[#0e0e0f] to-[#161616] text-white p-10 md:p-14 overflow-hidden border border-white/5">
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-amber-500/15 blur-3xl rounded-full pointer-events-none" />
-          <div className="absolute -bottom-40 -left-32 w-[28rem] h-[28rem] bg-amber-500/8 blur-3xl rounded-full pointer-events-none" />
-          <div className="relative flex items-center justify-between text-[10px] font-mono tracking-[0.3em] uppercase text-white/40">
-            <span>Daily · {today}</span>
-            <span className="hidden md:inline">Reflection</span>
-          </div>
-          <blockquote className="relative mt-10 text-3xl md:text-4xl xl:text-5xl font-semibold tighter leading-[1.05] max-w-4xl">
+        <figure className="relative pl-6 md:pl-8 border-l-2 border-amber-500 max-w-3xl">
+          <figcaption className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-700">
+            Reflection · {today}
+          </figcaption>
+          <blockquote className="mt-4 text-2xl md:text-3xl text-ink leading-snug tight italic font-light">
             {quote.quote}
           </blockquote>
-          <figcaption className="relative mt-10 flex items-center gap-3">
-            <span className="h-px w-10 bg-amber-400" />
-            <span className="text-sm text-amber-200/90 font-medium tracking-wide">{quote.author}</span>
-          </figcaption>
+          <figcaption className="mt-4 text-sm text-mute">— {quote.author}</figcaption>
         </figure>
       </section>
 
