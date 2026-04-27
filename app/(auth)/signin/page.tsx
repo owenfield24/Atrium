@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loadProfile, saveProfile } from "@/lib/profile";
+import { setSession } from "@/lib/session";
 
 type Stage = "credentials" | "code";
 
@@ -59,6 +60,7 @@ export default function SignInPage() {
         createdAt: new Date().toISOString(),
       });
     }
+    setSession(email);
     router.push("/dashboard");
   }
 

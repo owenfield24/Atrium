@@ -14,15 +14,28 @@ function loadState(): StoredState {
   if (typeof window === "undefined") return { active: DEFAULT_PRESETS[0], saved: [...DEFAULT_PRESETS] };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { active: DEFAULT_PRESETS[0], saved: [...DEFAULT_PRESETS] };
-    const parsed = JSON.parse(raw) as Partial<StoredState>;
-    const saved = Array.isArray(parsed.saved) && parsed.saved.length > 0
-      ? parsed.saved.filter((s) => REGIONS[s])
-      : [...DEFAULT_PRESETS];
-    const active = parsed.active && REGIONS[parsed.active] && saved.includes(parsed.active)
-      ? parsed.active
-      : saved[0];
-    return { active, saved };
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<StoredState>;
+      const saved = Array.isArray(parsed.saved) && parsed.saved.length > 0
+        ? parsed.saved.filter((s) => REGIONS[s])
+        : [...DEFAULT_PRESETS];
+      const active = parsed.active && REGIONS[parsed.active] && saved.includes(parsed.active)
+        ? parsed.active
+        : saved[0];
+      return { active, saved };
+    }
+    // No stored state yet — seed from the signed-in user's primary metro
+    // so a fresh signup opens the Brief focused on their market.
+    const profileRaw = localStorage.getItem("atrium:profile:v1");
+    if (profileRaw) {
+      try {
+        const profile = JSON.parse(profileRaw);
+        if (profile?.regionSlug && REGIONS[profile.regionSlug]) {
+          return { active: profile.regionSlug, saved: [profile.regionSlug] };
+        }
+      } catch { /* fall through to defaults */ }
+    }
+    return { active: DEFAULT_PRESETS[0], saved: [...DEFAULT_PRESETS] };
   } catch {
     return { active: DEFAULT_PRESETS[0], saved: [...DEFAULT_PRESETS] };
   }

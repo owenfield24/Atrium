@@ -149,25 +149,44 @@ export default function ClientDetailPage() {
       <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
         {isLandlord ? (
           <>
-            <MetaTile label="Unit"        value={draft.unitNumber ?? draft.unitAddress ?? "—"} />
-            <EditableTile label="Monthly rent">
-              <NumberField currency value={draft.monthlyRent ?? null} onCommit={(v) => patch({ monthlyRent: v ?? undefined })} placeholder="2,300" />
-            </EditableTile>
-            <MetaTile label="Lease ends"   value={draft.leaseEnd ? new Date(draft.leaseEnd).toLocaleDateString() : "—"} mono />
-            <MetaTile label="Status"       value={draft.applicationStatus ?? draft.status} />
+            <MetaTile label="Unit" value={draft.unitNumber ?? draft.unitAddress ?? "—"} />
+            {editMode ? (
+              <EditableTile label="Monthly rent">
+                <NumberField currency value={draft.monthlyRent ?? null} onCommit={(v) => patch({ monthlyRent: v ?? undefined })} placeholder="2,300" />
+              </EditableTile>
+            ) : (
+              <MetaTile label="Monthly rent" value={draft.monthlyRent ? fmt(draft.monthlyRent) : "—"} mono />
+            )}
+            <MetaTile label="Lease ends" value={draft.leaseEnd ? new Date(draft.leaseEnd).toLocaleDateString() : "—"} mono />
+            <MetaTile label="Status" value={draft.applicationStatus ?? draft.status} />
           </>
         ) : (
           <>
-            <MetaTile label="Type"         value={draft.type ?? "—"} />
-            <EditableTile label="Budget">
-              <div className="flex items-center gap-1.5">
-                <NumberField currency value={draft.budgetMin ?? null} onCommit={(v) => patch({ budgetMin: v ?? undefined })} placeholder="Min" />
-                <span className="text-mute text-xs">–</span>
-                <NumberField currency value={draft.budgetMax ?? draft.budget ?? null} onCommit={(v) => patch({ budgetMax: v ?? undefined, budget: v })} placeholder="Max" />
-              </div>
-            </EditableTile>
-            <MetaTile label="Source"       value={draft.source ?? "—"} />
-            <MetaTile label="Last contact" value={draft.lastContact ? new Date(draft.lastContact).toLocaleDateString() : "—"} mono />
+            <MetaTile label="Type" value={draft.type ?? "—"} />
+            {editMode ? (
+              <EditableTile label="Budget">
+                <div className="flex items-center gap-1.5">
+                  <NumberField currency value={draft.budgetMin ?? null} onCommit={(v) => patch({ budgetMin: v ?? undefined })} placeholder="Min" />
+                  <span className="text-mute text-xs">–</span>
+                  <NumberField currency value={draft.budgetMax ?? draft.budget ?? null} onCommit={(v) => patch({ budgetMax: v ?? undefined, budget: v })} placeholder="Max" />
+                </div>
+              </EditableTile>
+            ) : (
+              <MetaTile label="Budget" value={budgetDisplay} mono />
+            )}
+            <MetaTile label="Source" value={draft.source ?? "—"} />
+            {editMode ? (
+              <EditableTile label="Last contact">
+                <input
+                  type="date"
+                  value={draft.lastContact ?? ""}
+                  onChange={(e) => patch({ lastContact: e.target.value })}
+                  className="w-full px-3 py-2 rounded-md border border-line/70 bg-white text-sm text-ink font-mono focus:border-ink focus:outline-none transition-colors"
+                />
+              </EditableTile>
+            ) : (
+              <MetaTile label="Last contact" value={draft.lastContact ? new Date(draft.lastContact).toLocaleDateString() : "—"} mono />
+            )}
           </>
         )}
       </div>

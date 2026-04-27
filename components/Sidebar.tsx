@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "@/lib/utils";
-import { clearProfile, useProfile } from "@/lib/profile";
+import { loadProfile, saveProfile, useProfile } from "@/lib/profile";
+import { clearSession } from "@/lib/session";
 
 type IconName =
   | "grid" | "brief" | "home" | "users" | "briefcase"
@@ -179,8 +180,13 @@ export default function Sidebar() {
 
   const onSignOut = (e: React.MouseEvent) => {
     e.preventDefault();
-    clearProfile();
-    router.push("/");
+    // Clear the active session + flip emailVerified off on the saved profile
+    // so the next visit forces a real sign-in. Profile data, clients, photos
+    // remain on disk so re-signing in picks up exactly where they left off.
+    clearSession();
+    const existing = loadProfile();
+    if (existing) saveProfile({ ...existing, emailVerified: false });
+    router.push("/signin");
   };
 
   return (

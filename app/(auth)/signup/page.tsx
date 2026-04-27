@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveProfile, type Role, type PlanId, type UserProfile } from "@/lib/profile";
+import { setSession } from "@/lib/session";
 import { REGIONS } from "@/lib/brief/regions";
 import { pricingTiers } from "@/lib/saas/data";
 import { formatPhone } from "@/lib/utils";
@@ -161,6 +162,15 @@ export default function SignupPage() {
       }),
     };
     saveProfile(profile);
+    // Seed the regional spotlight to ONLY the user's primary metro so the
+    // Brief opens focused on their market, not a default like DFW.
+    try {
+      localStorage.setItem(
+        "atrium.brief.regions.v1",
+        JSON.stringify({ active: regionSlug, saved: [regionSlug] })
+      );
+    } catch {}
+    setSession(email);
     router.push("/dashboard");
   }
 
