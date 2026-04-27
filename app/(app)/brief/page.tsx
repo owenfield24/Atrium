@@ -5,10 +5,10 @@ import RegionSelector from "./RegionSelector";
 import BriefIntro from "./BriefIntro";
 import RegionalHighlights from "./RegionalHighlights";
 
-// Revalidate the page every 6 hours. Vercel re-renders in the background on
-// the next request after this window. Per-source `next.revalidate` hints in
-// fetchers.ts give a second cache-tier safety net.
-export const revalidate = 21600;
+// The Brief refreshes once per day. Primary trigger is the Vercel cron at
+// /api/cron/refresh-brief (fires at 8am ET via on-demand revalidation). The
+// 24-hour `revalidate` here is a safety net in case the cron misses a day.
+export const revalidate = 86400;
 
 export default async function Brief() {
   const data = await getBriefData();
