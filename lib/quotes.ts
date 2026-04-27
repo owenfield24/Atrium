@@ -1,0 +1,61 @@
+export type Quote = { quote: string; author: string };
+
+const QUOTES: Quote[] = [
+  { quote: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese proverb" },
+  { quote: "Don't wait to buy real estate. Buy real estate and wait.", author: "Will Rogers" },
+  { quote: "Real estate is an imperishable asset, ever increasing in value.", author: "Theodore Roosevelt" },
+  { quote: "Ninety percent of all millionaires become so through owning real estate.", author: "Andrew Carnegie" },
+  { quote: "The hardest thing about climbing the ladder of success is getting through the crowd at the bottom.", author: "Unknown" },
+  { quote: "Success usually comes to those who are too busy to be looking for it.", author: "Henry David Thoreau" },
+  { quote: "Buyers decide in the first eight seconds of seeing a home if they're interested in buying it.", author: "Barbara Corcoran" },
+  { quote: "To be successful, you have to have your heart in your business, and your business in your heart.", author: "Thomas Watson Sr." },
+  { quote: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
+  { quote: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+  { quote: "It is not the strongest of the species that survive, but the one most responsive to change.", author: "Charles Darwin" },
+  { quote: "Real estate cannot be lost or stolen, nor can it be carried away.", author: "Franklin D. Roosevelt" },
+  { quote: "Quality is more important than quantity. One home run is much better than two doubles.", author: "Steve Jobs" },
+  { quote: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { quote: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
+  { quote: "The only place where success comes before work is in the dictionary.", author: "Vidal Sassoon" },
+  { quote: "Successful people do what unsuccessful people are not willing to do.", author: "Jeff Olson" },
+  { quote: "I'm not in this business to make a living, I'm in it to make a life.", author: "Earl Nightingale" },
+  { quote: "If you want to go fast, go alone. If you want to go far, go together.", author: "African proverb" },
+  { quote: "Buying real estate is not only the best way, the quickest way, the safest way, but the only way to become wealthy.", author: "Marshall Field" },
+  { quote: "Every problem is a gift — without problems we would not grow.", author: "Anthony Robbins" },
+  { quote: "Risk comes from not knowing what you're doing.", author: "Warren Buffett" },
+  { quote: "Be fearful when others are greedy. Be greedy when others are fearful.", author: "Warren Buffett" },
+  { quote: "The expert in anything was once a beginner.", author: "Helen Hayes" },
+  { quote: "Either you run the day or the day runs you.", author: "Jim Rohn" },
+  { quote: "What we fear doing most is usually what we most need to do.", author: "Tim Ferriss" },
+  { quote: "It's not whether you get knocked down. It's whether you get up.", author: "Vince Lombardi" },
+  { quote: "If opportunity doesn't knock, build a door.", author: "Milton Berle" },
+  { quote: "Action is the foundational key to all success.", author: "Pablo Picasso" },
+  { quote: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { quote: "Do not be embarrassed by your failures. Learn from them and start again.", author: "Richard Branson" },
+  { quote: "There is no substitute for hard work.", author: "Thomas Edison" },
+  { quote: "Energy and persistence conquer all things.", author: "Benjamin Franklin" },
+  { quote: "A goal without a plan is just a wish.", author: "Antoine de Saint-Exupéry" },
+  { quote: "The first rule of compounding: never interrupt it unnecessarily.", author: "Charlie Munger" },
+  { quote: "We don't have to be smarter than the rest. We have to be more disciplined.", author: "Charlie Munger" },
+  { quote: "If you're not willing to learn, no one can help you. If you're determined to learn, no one can stop you.", author: "Zig Ziglar" },
+  { quote: "Patience is bitter, but its fruit is sweet.", author: "Aristotle" },
+  { quote: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+  { quote: "Real estate is the closest thing to the proverbial pot of gold.", author: "Ada Louise Huxtable" },
+  { quote: "Buy land, they're not making it anymore.", author: "Mark Twain" },
+  { quote: "Some people dream of success, while others wake up and work hard at it.", author: "Unknown" },
+  { quote: "If you don't take care of your customer, your competitor will.", author: "Bob Hooey" },
+  { quote: "People don't care how much you know until they know how much you care.", author: "Theodore Roosevelt" },
+  { quote: "Stop selling. Start helping.", author: "Zig Ziglar" },
+  { quote: "Good things happen to those who hustle.", author: "Anaïs Nin" },
+  { quote: "Working hard for something we don't care about is called stress; working hard for something we love is called passion.", author: "Simon Sinek" },
+  { quote: "Don't let the fear of losing be greater than the excitement of winning.", author: "Robert Kiyosaki" },
+  { quote: "The more I help others to succeed, the more I succeed.", author: "Ray Kroc" },
+  { quote: "Trust is built with consistency.", author: "Lincoln Chafee" },
+];
+
+/** Deterministic pick by date — same quote all day, advances next day. */
+export function dailyQuote(date: Date = new Date()): Quote {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const day = Math.floor((date.getTime() - start) / 86_400_000);
+  return QUOTES[day % QUOTES.length];
+}
