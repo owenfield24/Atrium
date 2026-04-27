@@ -120,10 +120,17 @@ export interface MatchResult {
   reasons: string[];   // human-readable why-it-matches bullets
 }
 
-/** Top-N MLS listings ranked against this client's notes + structured prefs. */
+/** Top-N MLS listings ranked against this client's notes + activity log + structured prefs. */
 export function getTopMatches(client: Client, count = 5): MatchResult[] {
+  // Aggregate every freeform signal we have on this client: the main notes
+  // field, plus every interaction-log entry (call, Zoom, in-person, etc.).
+  // The matcher reads them as one corpus so anything the agent jots down
+  // after a phone call automatically refines the rankings.
+  const fromLog = (client.activityLog ?? []).map((a) => a.summary).join("\n");
+  const allNotes = [client.notes ?? "", fromLog].filter(Boolean).join("\n");
+
   const prefs = extractPreferencesFromNotes(
-    client.notes ?? "",
+    allNotes,
     client.preferences,
     client.budget ?? undefined
   );

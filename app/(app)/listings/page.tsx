@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { mlsListings } from "@/lib/mls/data";
 import { fmt } from "@/lib/utils";
 import { Tabs } from "@/components/ui/Tabs";
@@ -55,7 +56,8 @@ function ListingGrid({ list }: { list: any[] }) {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
       {list.map((l) => (
-        <Card key={l.mlsId} padding="p-0" className="overflow-hidden hover:shadow-lg hover:shadow-slate-900/5 transition">
+        <Link key={l.mlsId} href={`/listings/${l.mlsId}`} className="block">
+        <Card padding="p-0" className="overflow-hidden hover:shadow-lg hover:shadow-slate-900/5 hover:border-ink/30 transition cursor-pointer">
           <div className="aspect-[16/9] bg-gradient-to-br from-slate-200 to-slate-100 relative overflow-hidden">
             {l.photos?.[0] && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -92,6 +94,7 @@ function ListingGrid({ list }: { list: any[] }) {
             </div>
           </div>
         </Card>
+        </Link>
       ))}
     </div>
   );

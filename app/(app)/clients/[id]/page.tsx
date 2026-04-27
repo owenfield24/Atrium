@@ -207,6 +207,13 @@ export default function ClientDetailPage() {
             />
           </Section>
 
+          {/* INTERACTION LOG — feeds the matcher */}
+          <InteractionLog
+            entries={draft.activityLog ?? []}
+            onChange={(next) => patch({ activityLog: next })}
+            emphasis={isLandlord ? "tenant" : "client"}
+          />
+
           {/* ───── LANDLORD-ONLY SECTIONS ───── */}
           {isLandlord && (
             <>
@@ -557,31 +564,36 @@ export default function ClientDetailPage() {
                   {matches.map((m, i) => {
                     const sLabel = scoreLabel(m.total);
                     return (
-                      <li key={m.listing.mlsId} className="rounded-xl border border-line bg-white p-4 hover:border-ink/30 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono text-mute">#{String(i + 1).padStart(2, "0")}</span>
-                              <span className="text-sm font-semibold text-ink truncate">{m.listing.address}</span>
+                      <li key={m.listing.mlsId}>
+                        <Link
+                          href={`/listings/${m.listing.mlsId}`}
+                          className="block rounded-xl border border-line bg-white p-4 hover:border-ink/40 hover:shadow-md hover:shadow-amber-200/30 transition cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono text-mute">#{String(i + 1).padStart(2, "0")}</span>
+                                <span className="text-sm font-semibold text-ink truncate">{m.listing.address}</span>
+                              </div>
+                              <p className="mt-1 text-[11px] text-mute">
+                                {m.listing.city} · {m.listing.zip} · <span className="font-mono">{m.listing.bedrooms}bd/{m.listing.bathrooms}ba</span>
+                              </p>
                             </div>
-                            <p className="mt-1 text-[11px] text-mute">
-                              {m.listing.city} · {m.listing.zip} · <span className="font-mono">{m.listing.bedrooms}bd/{m.listing.bathrooms}ba</span>
-                            </p>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-mono font-semibold text-ink">{fmt(m.listing.listPrice)}</p>
-                            <div className={`mt-0.5 text-[10px] font-mono uppercase tracking-wider ${sLabel.color}`}>
-                              <span className="font-bold">{m.total}</span> · {sLabel.label}
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-mono font-semibold text-ink">{fmt(m.listing.listPrice)}</p>
+                              <div className={`mt-0.5 text-[10px] font-mono uppercase tracking-wider ${sLabel.color}`}>
+                                <span className="font-bold">{m.total}</span> · {sLabel.label}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        {m.reasons.length > 0 && (
-                          <ul className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5">
-                            {m.reasons.slice(0, 2).map((r) => (
-                              <li key={r} className="text-[10px] text-mute">· {r}</li>
-                            ))}
-                          </ul>
-                        )}
+                          {m.reasons.length > 0 && (
+                            <ul className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5">
+                              {m.reasons.slice(0, 2).map((r) => (
+                                <li key={r} className="text-[10px] text-mute">· {r}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </Link>
                       </li>
                     );
                   })}
@@ -592,6 +604,150 @@ export default function ClientDetailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// ── Interaction log ─────────────────────────────────────────────────────
+type Entry = NonNullable<Client["activityLog"]>[number];
+type EntryType = Entry["type"];
+
+const ENTRY_TYPES: { value: EntryType; label: string; tone: string }[] = [
+  { value: "Call",    label: "Phone call",     tone: "bg-emerald-100 text-emerald-700" },
+  { value: "Meeting", label: "In-person",      tone: "bg-amber-100 text-amber-700"     },
+  { value: "Other",   label: "Zoom / video",   tone: "bg-purple-100 text-purple-700"   },
+  { value: "Text",    label: "Text",           tone: "bg-blue-100 text-blue-700"       },
+  { value: "Email",   label: "Email",          tone: "bg-slate-100 text-slate-700"     },
+  { value: "Showing", label: "Showing",        tone: "bg-rose-100 text-rose-700"       },
+  { value: "Offer",   label: "Offer / decision", tone: "bg-amber-100 text-amber-800"   },
+];
+
+function InteractionLog({
+  entries, onChange, emphasis,
+}: {
+  entries: Entry[];
+  onChange: (next: Entry[]) => void;
+  emphasis: "client" | "tenant";
+}) {
+  const [adding, setAdding]   = useState(false);
+  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10));
+  const [type, setType]       = useState<EntryType>("Call");
+  const [summary, setSummary] = useState("");
+
+  const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+
+  const addEntry = () => {
+    if (!summary.trim()) return;
+    const next: Entry = {
+      id: `IL-${Date.now().toString(36).toUpperCase()}`,
+      date, type, summary: summary.trim(),
+    };
+    onChange([...entries, next]);
+    setSummary("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setType("Call");
+    setAdding(false);
+  };
+
+  return (
+    <Section
+      eyebrow="Interaction log"
+      title={`Calls, Zooms, in-person convos${emphasis === "client" ? " — feeds the matcher." : "."}`}
+      action={
+        !adding && (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-xs font-medium bg-ink text-white px-3 py-1.5 rounded-full hover:bg-mute"
+          >
+            + Log interaction
+          </button>
+        )
+      }
+    >
+      {adding && (
+        <div className="rounded-xl border border-line bg-white p-4 space-y-3">
+          <div className="grid sm:grid-cols-[140px_180px_1fr] gap-3 items-start">
+            <label className="block">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">Date</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="mt-1.5 w-full px-3 py-2 rounded-md border border-line/70 bg-white text-sm text-ink focus:border-ink focus:outline-none font-mono"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">Type</span>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as EntryType)}
+                className="mt-1.5 w-full px-3 py-2 rounded-md border border-line/70 bg-white text-sm text-ink focus:border-ink focus:outline-none"
+              >
+                {ENTRY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">What was said</span>
+              <textarea
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                rows={3}
+                autoFocus
+                placeholder="Wants 4-bed in Westlake under $900k, must have pool. Will tour Saturday."
+                className="mt-1.5 w-full px-3 py-2 rounded-md border border-line/70 bg-white text-sm text-ink focus:border-ink focus:outline-none placeholder:text-mute/50 resize-y"
+              />
+            </label>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <button onClick={() => { setAdding(false); setSummary(""); }} className="text-sm font-medium text-mute hover:text-ink px-3 py-2 rounded-full">Cancel</button>
+            <button
+              onClick={addEntry}
+              disabled={!summary.trim()}
+              className="bg-ink text-white text-sm font-medium px-5 py-2 rounded-full hover:bg-mute disabled:bg-line disabled:text-mute/70 disabled:cursor-not-allowed"
+            >
+              Save entry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sorted.length === 0 && !adding && (
+        <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-mute">
+          No interactions logged yet. Drop in what you discussed on the last call or Zoom — the matcher reads it.
+        </div>
+      )}
+
+      {sorted.length > 0 && (
+        <ol className="space-y-2">
+          {sorted.map((e) => {
+            const tone = ENTRY_TYPES.find((t) => t.value === e.type);
+            return (
+              <li key={e.id} className="group flex items-start gap-4 rounded-xl border border-line bg-white p-4">
+                <div className="flex flex-col items-center w-16 flex-shrink-0">
+                  <span className="text-[10px] font-mono uppercase text-mute">
+                    {new Date(e.date).toLocaleDateString("en-US", { month: "short" })}
+                  </span>
+                  <span className="text-2xl font-semibold tighter text-ink leading-none">
+                    {new Date(e.date).getDate()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${tone?.tone ?? "bg-soft text-mute"}`}>
+                    {tone?.label ?? e.type}
+                  </span>
+                  <p className="mt-2 text-sm text-ink leading-snug whitespace-pre-wrap">{e.summary}</p>
+                </div>
+                <button
+                  onClick={() => { if (confirm("Remove this entry?")) onChange(entries.filter((x) => x.id !== e.id)); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-mute hover:text-rose-600 text-lg leading-none w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center flex-shrink-0"
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </Section>
   );
 }
 
