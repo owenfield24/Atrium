@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getBriefData } from "@/lib/brief/fetchers";
 import type { Indicator, RatePoint } from "@/lib/brief/types";
 import RegionSelector from "./RegionSelector";
+import BriefIntro from "./BriefIntro";
+import RegionalHighlights from "./RegionalHighlights";
 
 // Revalidate the page every 6 hours. Vercel re-renders in the background on
 // the next request after this window. Per-source `next.revalidate` hints in
@@ -47,8 +49,22 @@ export default async function Brief() {
         Today in the housing market.
       </h1>
 
-      {/* REGIONAL SPOTLIGHT — top of page, no sub-paragraph */}
-      <section className="mt-10">
+      {/* PERSONALIZED NATIONAL LEAD — region-aware paragraph at the top */}
+      <BriefIntro
+        thirty={data.indicators.thirty.value}
+        thirtyDelta={data.indicators.thirty.delta ?? ""}
+        thirtyUp={!!data.indicators.thirty.up}
+        monthsSupply={data.indicators.monthsSupply.value}
+        monthsSupplyDelta={data.indicators.monthsSupply.delta ?? ""}
+        medianPrice={data.indicators.medianPrice.value}
+        medianYoy={data.indicators.medianPrice.delta ?? ""}
+      />
+
+      {/* REGIONAL HIGHLIGHTS — user-curated notes that persist across sessions */}
+      <RegionalHighlights />
+
+      {/* REGIONAL SPOTLIGHT — pick another market to inspect */}
+      <section className="mt-14">
         <SectionHeader eyebrow="Regional spotlight" title="Pick a market." />
         <RegionSelector />
       </section>

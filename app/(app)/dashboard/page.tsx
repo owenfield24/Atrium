@@ -33,16 +33,22 @@ export default function DashboardPage() {
       {role === "agent-agency" && <AgencyHero       agency={profile?.agency} clients={clients} />}
       {role === "landlord"     && <LandlordHero     landlord={profile?.landlord} />}
 
-      {/* DAILY QUOTE — replaces "Jump to" */}
+      {/* DAILY QUOTE — minimal, monochrome, with a single thin accent rule */}
       <section className="mt-16">
-        <p className="text-xs font-bold uppercase tracking-widest text-amber-600">Today's quote</p>
-        <figure className="mt-4 relative rounded-3xl bg-white border border-line p-8 md:p-10 overflow-hidden">
-          <span className="absolute top-0 left-8 right-8 h-0.5 bg-amber-400" />
-          <span className="absolute -top-6 left-6 text-[8rem] leading-none font-serif text-amber-200/80 select-none pointer-events-none">"</span>
-          <blockquote className="relative text-2xl md:text-3xl font-semibold tighter leading-snug text-ink max-w-3xl">
+        <figure className="relative rounded-2xl bg-gradient-to-br from-ink via-[#0e0e0f] to-[#161616] text-white p-10 md:p-14 overflow-hidden border border-white/5">
+          <div className="absolute -top-32 -right-32 w-96 h-96 bg-amber-500/15 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -bottom-40 -left-32 w-[28rem] h-[28rem] bg-amber-500/8 blur-3xl rounded-full pointer-events-none" />
+          <div className="relative flex items-center justify-between text-[10px] font-mono tracking-[0.3em] uppercase text-white/40">
+            <span>Daily · {today}</span>
+            <span className="hidden md:inline">Reflection</span>
+          </div>
+          <blockquote className="relative mt-10 text-3xl md:text-4xl xl:text-5xl font-semibold tighter leading-[1.05] max-w-4xl">
             {quote.quote}
           </blockquote>
-          <figcaption className="relative mt-5 text-sm text-mute font-medium">— {quote.author}</figcaption>
+          <figcaption className="relative mt-10 flex items-center gap-3">
+            <span className="h-px w-10 bg-amber-400" />
+            <span className="text-sm text-amber-200/90 font-medium tracking-wide">{quote.author}</span>
+          </figcaption>
         </figure>
       </section>
 

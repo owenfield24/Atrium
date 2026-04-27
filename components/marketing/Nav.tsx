@@ -35,20 +35,12 @@ export default function MarketingNav() {
           </Link>
         ))}
 
-        {signedIn ? (
-          <Link href="/dashboard" className="ml-1 bg-ink text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-mute">
-            Open dashboard
-          </Link>
-        ) : (
-          <>
-            <Link href="/signin" className="ml-1 text-sm text-ink font-medium px-3 py-1.5 rounded-full hover:bg-line/60">
-              Sign in
-            </Link>
-            <Link href="/signup" className="bg-ink text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-mute">
-              Sign up
-            </Link>
-          </>
-        )}
+        <Link
+          href={signedIn ? "/dashboard" : "/signin"}
+          className="ml-1 bg-ink text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-mute"
+        >
+          {signedIn ? "Open dashboard" : "Sign in"}
+        </Link>
       </div>
     </header>
   );

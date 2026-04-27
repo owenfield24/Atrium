@@ -1,17 +1,16 @@
 import Link from "next/link";
-import AtriumLogo from "@/components/AtriumLogo";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-soft flex flex-col">
-      <header className="px-6 md:px-10 py-5">
-        <Link href="/" className="inline-flex items-center gap-2">
-          <AtriumLogo />
-        </Link>
-      </header>
-      <main className="flex-1 flex items-start justify-center px-6 md:px-10 pb-20 pt-4">
-        <div className="w-full max-w-2xl">{children}</div>
-      </main>
+      {/* Floating "Back to site" — sits on the right pane only on desktop */}
+      <Link
+        href="/"
+        className="fixed top-5 right-6 md:right-10 z-40 text-xs text-mute hover:text-ink font-medium px-3 py-1.5 rounded-full bg-white/70 border border-line/60 backdrop-blur"
+      >
+        ← Back to site
+      </Link>
+      <main className="flex-1 flex items-stretch">{children}</main>
     </div>
   );
 }
