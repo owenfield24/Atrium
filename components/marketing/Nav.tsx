@@ -39,7 +39,7 @@ export default function MarketingNav() {
           href={signedIn ? "/dashboard" : "/signin"}
           className="ml-1 bg-ink text-white text-sm font-medium px-4 py-1.5 rounded-full hover:bg-mute"
         >
-          {signedIn ? "Open dashboard" : "Sign in"}
+          Sign in
         </Link>
       </div>
     </header>

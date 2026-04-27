@@ -106,6 +106,83 @@ export interface Client {
 
   // Photo (data URL, compressed locally before save)
   photo?: string;
+
+  // — Current housing —
+  currentHousing?: "Own" | "Rent" | "Other";
+  currentAddress?: string;
+  currentHomeValue?: number;
+  currentMonthlyHousing?: number;   // mortgage or rent
+  leaseEndsOn?: string;             // ISO date
+
+  // — Financial profile —
+  downPayment?: number;
+  annualIncome?: number;
+  creditScoreRange?: "<620" | "620–680" | "680–740" | "740–780" | "780+";
+  fundsSource?: "Savings" | "Gift" | "Sale of current home" | "Investment" | "Other";
+  marriedFiling?: "Single" | "Married, filing jointly" | "Married, filing separately";
+
+  // — Expanded buying criteria —
+  minSqft?: number;
+  maxSqft?: number;
+  minYearBuilt?: number;
+  minGarageSpaces?: number;
+  minLotSize?: number;              // acres
+  storyPreference?: "Single-story" | "Multi-story" | "No preference";
+  maxHoaFee?: number;               // monthly cap
+  openToFixer?: boolean;
+  pets?: string;                    // free-form: "1 dog (golden), 2 cats"
+  accessibilityNeeds?: string;
+  commuteAddress?: string;          // address to optimize for proximity
+
+  // — Representation —
+  buyerBrokerSigned?: boolean;
+  buyerBrokerExpires?: string;      // ISO date
+  listingAgreementSigned?: boolean;
+  listingAgreementExpires?: string;
+  commissionRate?: number;          // percent, e.g. 2.5
+
+  // — Investor profile (when applicable) —
+  isInvestor?: boolean;
+  investorType?: "Flip" | "Buy-and-hold" | "BRRRR" | "1031 exchange" | "Other";
+  targetCapRate?: number;
+
+  // — Activity log (chronological touchpoints) —
+  activityLog?: {
+    id: string;
+    date: string;                   // ISO date
+    type: "Call" | "Email" | "Text" | "Showing" | "Meeting" | "Offer" | "Other";
+    summary: string;
+  }[];
+
+  // — Document checklist —
+  documents?: string[];             // labels of completed docs
+
+  // ───────────────────────────────────────────────────────────────────
+  // LANDLORD / TENANT FIELDS
+  // (Used when the signed-in user's role is "landlord" — these treat the
+  //  client record as a tenant or applicant rather than a buyer/seller.)
+  // ───────────────────────────────────────────────────────────────────
+  unitAddress?: string;
+  unitNumber?: string;
+  leaseStart?: string;              // ISO date
+  leaseEnd?: string;                // ISO date
+  monthlyRent?: number;
+  securityDeposit?: number;
+  moveInDate?: string;
+  moveOutDate?: string;
+  paymentMethod?: "ACH" | "Check" | "Card" | "Cash" | "Money order";
+  autopay?: boolean;
+  rentersInsuranceProvider?: string;
+  rentersInsuranceExpires?: string;
+  applicationStatus?: "Applicant" | "Approved" | "Pending" | "Denied" | "Withdrawn";
+  applicationDate?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  vehicleInfo?: string;             // "2022 Honda CR-V · TX 8YBT123"
+  evictionHistory?: boolean;
+  housingHistory?: string;          // notes on prior rentals
+  backgroundCheckCompleted?: boolean;
 }
 
 export interface MatchScore {

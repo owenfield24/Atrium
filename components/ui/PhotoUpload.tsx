@@ -1,14 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { compressImage } from "@/lib/image";
+import PhotoCropper from "./PhotoCropper";
 
 interface Props {
   /** Current photo as data URL (or undefined). */
   value?: string;
   /** Two-letter fallback initials shown when no photo is set. */
   initials: string;
-  /** Called with the compressed data URL after upload. Pass empty string to clear. */
+  /** Called with the cropped data URL after the user saves. Pass empty string to clear. */
   onChange: (dataUrl: string) => void;
   size?: "sm" | "md" | "lg";
 }
@@ -21,45 +21,39 @@ const SIZES = {
 
 export default function PhotoUpload({ value, initials, onChange, size = "md" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [error, setError]       = useState<string | null>(null);
 
-  const pick = async (file: File) => {
+  const onPick = async (file: File) => {
     setError(null);
-    setBusy(true);
-    try {
-      const dataUrl = await compressImage(file);
-      onChange(dataUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load that image.");
-    } finally {
-      setBusy(false);
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
     }
+    const reader = new FileReader();
+    reader.onload  = () => setRawImage(String(reader.result));
+    reader.onerror = () => setError("Could not read this image.");
+    reader.readAsDataURL(file);
   };
 
   return (
-    <div className="flex items-center gap-4">
-      <div
-        className={`${SIZES[size]} relative rounded-full overflow-hidden flex items-center justify-center font-bold flex-shrink-0 bg-ink text-amber-400 ring-1 ring-line/60`}
-      >
-        {value ? (
-          <img src={value} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span>{initials}</span>
-        )}
-        {busy && (
-          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-mono">…</span>
-        )}
-      </div>
+    <>
+      <div className="flex items-center gap-3">
+        <div className={`${SIZES[size]} relative rounded-full overflow-hidden flex items-center justify-center font-bold flex-shrink-0 bg-ink text-amber-400 ring-1 ring-line/60`}>
+          {value ? (
+            <img src={value} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
 
-      <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             className="text-xs font-medium text-ink bg-soft border border-line/80 hover:border-ink/40 px-3 py-1.5 rounded-full"
           >
-            {value ? "Replace photo" : "Upload photo"}
+            {value ? "Replace" : "Upload photo"}
           </button>
           {value && (
             <button
@@ -71,19 +65,28 @@ export default function PhotoUpload({ value, initials, onChange, size = "md" }: 
             </button>
           )}
         </div>
-        <p className="mt-1.5 text-[11px] text-mute leading-snug">
-          PNG, JPG, or HEIC. We center-crop to a square and resize before saving — keep it under 5 MB.
-        </p>
-        {error && <p className="mt-1.5 text-[11px] text-rose-600">{error}</p>}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.currentTarget.value = ""; }}
+          className="hidden"
+        />
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.currentTarget.value = ""; }}
-        className="hidden"
-      />
-    </div>
+      {error && <p className="mt-2 text-[11px] text-rose-600">{error}</p>}
+
+      {rawImage && (
+        <PhotoCropper
+          image={rawImage}
+          onCancel={() => setRawImage(null)}
+          onSave={(cropped) => {
+            onChange(cropped);
+            setRawImage(null);
+          }}
+        />
+      )}
+    </>
   );
 }

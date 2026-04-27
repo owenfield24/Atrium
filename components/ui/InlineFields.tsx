@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-// Shared input chrome — borderless until hover/focus, so a long form scans
-// like data, not a wall of boxes.
+// Shared input chrome — visible-but-subtle by default so users can see
+// every field is editable, deepens on hover/focus.
 const SHARED =
-  "w-full bg-transparent text-sm text-ink rounded-md px-2 py-1.5 -mx-2 " +
-  "border border-transparent hover:border-line/80 focus:border-ink focus:bg-white " +
-  "focus:outline-none transition-colors placeholder:text-mute/50";
+  "w-full bg-white/60 text-sm text-ink rounded-md px-3 py-2 " +
+  "border border-line/70 hover:border-line hover:bg-white " +
+  "focus:border-ink focus:bg-white focus:outline-none transition-colors " +
+  "placeholder:text-mute/50";
 
 /** Section wrapper: monospace eyebrow + title, divider above. */
 export function Section({ eyebrow, title, action, children }: {
@@ -204,7 +205,7 @@ export function ChipsField({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 -mx-2 px-2 py-1.5 rounded-md border border-transparent hover:border-line/80 focus-within:border-ink focus-within:bg-white transition-colors min-h-[32px]">
+    <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-md border border-line/70 bg-white/60 hover:border-line hover:bg-white focus-within:border-ink focus-within:bg-white transition-colors min-h-[40px]">
       {list.map((chip) => (
         <span key={chip} className="inline-flex items-center gap-1 bg-soft text-ink text-xs font-medium px-2 py-0.5 rounded-full border border-line/60">
           {chip}

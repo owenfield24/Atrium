@@ -9,10 +9,14 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import PhotoUpload from "@/components/ui/PhotoUpload";
 import { useClients, addClient, removeClient } from "@/lib/clients-store";
+import { useProfile } from "@/lib/profile";
 
 export default function ClientsPage() {
   const clients = useClients();
+  const profile = useProfile();
   const [showAdd, setShowAdd] = useState(false);
+
+  const isLandlord = profile?.role === "landlord";
 
   const buyers   = clients.filter((c) => c.status === "Active Buyer");
   const sellers  = clients.filter((c) => c.status === "Active Seller");
@@ -24,25 +28,34 @@ export default function ClientsPage() {
     <div className="p-7 space-y-6">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600">Clients</p>
-          <h1 className="mt-2 text-4xl md:text-5xl font-semibold tighter leading-tight">Your sphere.</h1>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-600">{isLandlord ? "Tenants" : "Clients"}</p>
+          <h1 className="mt-2 text-4xl md:text-5xl font-semibold tighter leading-tight">
+            {isLandlord ? "Your tenants." : "Your sphere."}
+          </h1>
         </div>
         <button
           onClick={() => setShowAdd(true)}
           className="bg-ink text-white text-sm font-medium px-5 py-2.5 rounded-full hover:bg-mute shadow-md shadow-black/5"
         >
-          + Add client
+          {isLandlord ? "+ Add tenant" : "+ Add client"}
         </button>
       </div>
 
       <Tabs
-        tabs={[
-          { id: "all",     label: "All",     count: clients.length },
-          { id: "buyers",  label: "Buyers",  count: buyers.length  },
-          { id: "sellers", label: "Sellers", count: sellers.length },
-          { id: "leads",   label: "Leads",   count: leads.length   },
-          { id: "past",    label: "Past clients", count: past.length },
-          { id: "nurture", label: "Nurture", count: nurture.length },
+        tabs={isLandlord ? [
+          { id: "all",     label: "All",         count: clients.length },
+          { id: "sellers", label: "Active",      count: sellers.length },
+          { id: "buyers",  label: "Applicants",  count: buyers.length  },
+          { id: "leads",   label: "Leads",       count: leads.length   },
+          { id: "past",    label: "Past tenants",count: past.length    },
+          { id: "nurture", label: "Nurture",     count: nurture.length },
+        ] : [
+          { id: "all",     label: "All",          count: clients.length },
+          { id: "buyers",  label: "Buyers",       count: buyers.length  },
+          { id: "sellers", label: "Sellers",      count: sellers.length },
+          { id: "leads",   label: "Leads",        count: leads.length   },
+          { id: "past",    label: "Past clients", count: past.length    },
+          { id: "nurture", label: "Nurture",      count: nurture.length },
         ]}
       >
         {(active) => {

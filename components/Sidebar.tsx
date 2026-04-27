@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "@/lib/utils";
-import { clearProfile } from "@/lib/profile";
+import { clearProfile, useProfile } from "@/lib/profile";
 
 type IconName =
   | "grid" | "brief" | "home" | "users" | "briefcase"
@@ -136,7 +136,7 @@ function Icon({ name }: { name: IconName }) {
   }
 }
 
-const items: Item[] = [
+const AGENT_ITEMS: Item[] = [
   { href: "/dashboard",    label: "Dashboard",    icon: "grid"      },
   { href: "/brief",        label: "The Brief",    icon: "brief"     },
   { href: "/listings",     label: "Listings",     icon: "home"      },
@@ -152,9 +152,30 @@ const items: Item[] = [
   { href: "/settings",     label: "Settings",     icon: "cog"       },
 ];
 
+const LANDLORD_ITEMS: Item[] = [
+  { href: "/dashboard",    label: "Dashboard",    icon: "grid"      },
+  { href: "/brief",        label: "Rental brief", icon: "brief"     },
+  { href: "/keystone",     label: "Properties",   icon: "building"  },
+  { href: "/clients",      label: "Tenants",      icon: "users"     },
+  { href: "/transactions", label: "Leases",       icon: "briefcase" },
+  { href: "/marketing",    label: "Marketing",    icon: "megaphone" },
+  { href: "/insights",     label: "Insights",     icon: "chart"     },
+  { href: "/integrations", label: "Integrations", icon: "plug"      },
+  { href: "/compliance",   label: "Compliance",   icon: "shield"    },
+  { href: "/billing",      label: "Billing",      icon: "card"      },
+  { href: "/settings",     label: "Settings",     icon: "cog"       },
+];
+
+const AGENCY_ITEMS: Item[] = AGENT_ITEMS;   // agencies see everything agents do, plus Team
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const profile = useProfile();
+  const items =
+    profile?.role === "landlord"     ? LANDLORD_ITEMS :
+    profile?.role === "agent-agency" ? AGENCY_ITEMS   :
+    AGENT_ITEMS;
 
   const onSignOut = (e: React.MouseEvent) => {
     e.preventDefault();
