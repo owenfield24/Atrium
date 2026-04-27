@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import type { Client } from "@/types";
-import { fmt } from "@/lib/utils";
+import { fmt, formatPhone } from "@/lib/utils";
 import { Tabs } from "@/components/ui/Tabs";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useClients, addClient, removeClient } from "@/lib/clients-store";
+import ClientDrawer from "./ClientDrawer";
 
 export default function ClientsPage() {
   const clients = useClients();
   const [showAdd, setShowAdd] = useState(false);
+  const [openClientId, setOpenClientId] = useState<string | null>(null);
+  const openClient = openClientId ? clients.find((c) => c.id === openClientId) ?? null : null;
 
   const buyers   = clients.filter((c) => c.status === "Active Buyer");
   const sellers  = clients.filter((c) => c.status === "Active Seller");
@@ -45,16 +48,17 @@ export default function ClientsPage() {
       >
         {(active) => {
           const list = ({ all: clients, buyers, sellers, leads, past, nurture } as Record<string, Client[]>)[active] ?? clients;
-          return <ClientList list={list} onRemove={removeClient} />;
+          return <ClientList list={list} onRemove={removeClient} onOpen={setOpenClientId} />;
         }}
       </Tabs>
 
       {showAdd && <AddClientModal onClose={() => setShowAdd(false)} />}
+      <ClientDrawer client={openClient} onClose={() => setOpenClientId(null)} />
     </div>
   );
 }
 
-function ClientList({ list, onRemove }: { list: Client[]; onRemove: (id: string) => void }) {
+function ClientList({ list, onRemove, onOpen }: { list: Client[]; onRemove: (id: string) => void; onOpen: (id: string) => void }) {
   if (list.length === 0)
     return <Card><p className="text-sm text-slate-500">No clients in this view.</p></Card>;
 
@@ -82,7 +86,11 @@ function ClientList({ list, onRemove }: { list: Client[]; onRemove: (id: string)
         </thead>
         <tbody className="divide-y divide-slate-100">
           {list.map((c) => (
-            <tr key={c.id} className="hover:bg-slate-50 group">
+            <tr
+              key={c.id}
+              onClick={() => onOpen(c.id)}
+              className="hover:bg-slate-50 group cursor-pointer"
+            >
               <td className="px-5 py-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-amber-400 font-bold text-xs flex items-center justify-center">
@@ -103,7 +111,8 @@ function ClientList({ list, onRemove }: { list: Client[]; onRemove: (id: string)
               </td>
               <td className="px-2 py-3 text-right">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (confirm(`Remove ${c.firstName} ${c.lastName}?`)) onRemove(c.id);
                   }}
                   title="Remove client"
@@ -165,7 +174,7 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
             <ModalField label="First name"><ModalInput value={firstName} onChange={setFirstName} placeholder="Jennifer" autoFocus /></ModalField>
             <ModalField label="Last name"><ModalInput value={lastName} onChange={setLastName} placeholder="Walsh" /></ModalField>
             <ModalField label="Email"><ModalInput value={email} onChange={setEmail} placeholder="jennifer@gmail.com" type="email" /></ModalField>
-            <ModalField label="Phone"><ModalInput value={phone} onChange={setPhone} placeholder="(512) 555-0188" /></ModalField>
+            <ModalField label="Phone"><ModalInput value={phone} onChange={(v) => setPhone(formatPhone(v))} placeholder="(512) 555-0188" /></ModalField>
             <ModalField label="Status">
               <ModalSelect
                 value={status}

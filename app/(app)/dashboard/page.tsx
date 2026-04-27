@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const quote = dailyQuote();
 
-  const firstName = profile?.firstName || "Tyrone";
+  const firstName = profile?.firstName ?? "";
 
   return (
     <div className="max-w-6xl mx-auto pt-16 pb-24">
@@ -26,7 +26,7 @@ export default function DashboardPage() {
         {today}
       </div>
       <h1 className="mt-5 text-6xl md:text-7xl font-semibold tighter leading-[0.95]">
-        Good morning,<br />{firstName}.
+        {firstName ? <>Good morning,<br />{firstName}.</> : <>Good morning.</>}
       </h1>
 
       {role === "agent-solo"   && <SoloAgentHero    clients={clients} />}

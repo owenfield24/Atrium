@@ -36,11 +36,11 @@ export type Transaction = {
 };
 
 export const transactions: Transaction[] = [
-  { id: "TX-101", address: "4821 Westbrook Lane",     side: "Buyer",  client: "Jennifer Walsh",  agent: "Tyrone Mitchell", stage: "Active Search",   price: 875000,  closeDate: null,         daysInStage: 6,  pctDone: 25, flags: ["Buyer-Broker Signed", "Pre-approved"] },
+  { id: "TX-101", address: "4821 Westbrook Lane",     side: "Buyer",  client: "Jennifer Walsh",  agent: "Jordan Reeves", stage: "Active Search",   price: 875000,  closeDate: null,         daysInStage: 6,  pctDone: 25, flags: ["Buyer-Broker Signed", "Pre-approved"] },
   { id: "TX-102", address: "1103 Ridgecrest Drive",   side: "Seller", client: "Daniels Family",   agent: "James Okafor",    stage: "Under Contract",  price: 1250000, closeDate: "2026-05-12", daysInStage: 4,  pctDone: 65, flags: ["Inspection Done"] },
-  { id: "TX-103", address: "512 East 6th Street #4B", side: "Buyer",  client: "Marcus Chen",      agent: "Tyrone Mitchell", stage: "Offer",           price: 445000,  closeDate: "2026-05-30", daysInStage: 2,  pctDone: 40, flags: ["Buyer-Broker Signed"] },
+  { id: "TX-103", address: "512 East 6th Street #4B", side: "Buyer",  client: "Marcus Chen",      agent: "Jordan Reeves", stage: "Offer",           price: 445000,  closeDate: "2026-05-30", daysInStage: 2,  pctDone: 40, flags: ["Buyer-Broker Signed"] },
   { id: "TX-104", address: "2400 Travis Heights Blvd", side: "Seller", client: "Robinson",        agent: "Maya Patel",      stage: "Closing",         price: 695000,  closeDate: "2026-04-29", daysInStage: 1,  pctDone: 90, flags: ["Final Walkthrough"] },
-  { id: "TX-105", address: "8765 Lakeview Terrace",   side: "Buyer",  client: "Sofia Reyes",      agent: "Tyrone Mitchell", stage: "Lead",            price: 0,       closeDate: null,         daysInStage: 12, pctDone: 5,  flags: ["No Buyer-Broker Yet"] },
+  { id: "TX-105", address: "8765 Lakeview Terrace",   side: "Buyer",  client: "Sofia Reyes",      agent: "Jordan Reeves", stage: "Lead",            price: 0,       closeDate: null,         daysInStage: 12, pctDone: 5,  flags: ["No Buyer-Broker Yet"] },
   { id: "TX-106", address: "316 Pemberton Heights",   side: "Buyer",  client: "Theo Nakamura",    agent: "James Okafor",    stage: "Closed",          price: 980000,  closeDate: "2026-04-08", daysInStage: 0,  pctDone: 100, flags: [] },
 ];
 
@@ -156,7 +156,7 @@ export type TeamMember = {
 };
 
 export const team: TeamMember[] = [
-  { id: "A-1", name: "Tyrone Mitchell",  initials: "TM", role: "Owner / DB",        seat: "Atrium",     ytdGCI: 184500, ytdTransactions: 11, capProgress: 0.92, status: "Active" },
+  { id: "A-1", name: "Jordan Reeves",  initials: "TM", role: "Owner / DB",        seat: "Atrium",     ytdGCI: 184500, ytdTransactions: 11, capProgress: 0.92, status: "Active" },
   { id: "A-2", name: "James Okafor",    initials: "JO", role: "Agent",             seat: "Courtyard",  ytdGCI: 121300, ytdTransactions: 8,  capProgress: 0.74, status: "Active" },
   { id: "A-3", name: "Maya Patel",      initials: "MP", role: "Agent",             seat: "Courtyard",  ytdGCI: 88600,  ytdTransactions: 6,  capProgress: 0.55, status: "Active" },
   { id: "A-4", name: "Ren Castillo",    initials: "RC", role: "Agent",             seat: "Skylight",   ytdGCI: 22400,  ytdTransactions: 2,  capProgress: 0.14, status: "Onboarding" },
@@ -176,7 +176,7 @@ export type AuditEvent = {
 
 export const auditEvents: AuditEvent[] = [
   { id: "E-9001", ts: "2026-04-25T14:22:00Z", actor: "consumer:abc-918", kind: "view",   message: "Listing detail viewed: 4821 Westbrook Lane",            mls: "NTREIS"  },
-  { id: "E-9000", ts: "2026-04-25T14:18:00Z", actor: "Tyrone Mitchell",   kind: "share",  message: "Shortlist sent to Jennifer Walsh — 5 listings",         mls: "NTREIS"  },
+  { id: "E-9000", ts: "2026-04-25T14:18:00Z", actor: "Jordan Reeves",   kind: "share",  message: "Shortlist sent to Jennifer Walsh — 5 listings",         mls: "NTREIS"  },
   { id: "E-8999", ts: "2026-04-25T13:55:00Z", actor: "consumer:abc-918", kind: "search", message: "Search: 4bd / Westlake / $750k–$950k",                  mls: "NTREIS"  },
   { id: "E-8998", ts: "2026-04-25T11:02:00Z", actor: "system",           kind: "rule",   message: "Filtered 14 listings flagged Internet-Display=No",      mls: "NTREIS"  },
   { id: "E-8997", ts: "2026-04-25T10:41:00Z", actor: "system",           kind: "rule",   message: "Suppressed Office-Exclusive Exempt listing",            mls: "Bright"  },

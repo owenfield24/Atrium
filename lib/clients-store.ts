@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import type { Client } from "@/types";
 import { clients as seededClients } from "@/lib/mls/data";
 
-const KEY_ADDED   = "atrium:clients:added:v1";
-const KEY_REMOVED = "atrium:clients:removed:v1";
-const EVENT       = "atrium:clients-changed";
+const KEY_ADDED     = "atrium:clients:added:v1";
+const KEY_REMOVED   = "atrium:clients:removed:v1";
+const KEY_OVERRIDES = "atrium:clients:overrides:v1"; // patches applied to seeded or added clients
+const EVENT         = "atrium:clients-changed";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -25,10 +26,13 @@ function writeJson(key: string, value: unknown) {
 }
 
 export function getAllClients(): Client[] {
-  const added: Client[]    = readJson(KEY_ADDED, []);
-  const removed: string[]  = readJson(KEY_REMOVED, []);
+  const added: Client[]                                = readJson(KEY_ADDED, []);
+  const removed: string[]                              = readJson(KEY_REMOVED, []);
+  const overrides: Record<string, Partial<Client>>     = readJson(KEY_OVERRIDES, {});
   const removedSet = new Set(removed);
-  return [...seededClients, ...added].filter((c) => !removedSet.has(c.id));
+  return [...seededClients, ...added]
+    .filter((c) => !removedSet.has(c.id))
+    .map((c) => (overrides[c.id] ? { ...c, ...overrides[c.id] } : c));
 }
 
 export function addClient(input: Omit<Client, "id" | "createdAt"> & { id?: string }): Client {
@@ -52,6 +56,19 @@ export function removeClient(id: string) {
   }
   const removed: string[] = readJson(KEY_REMOVED, []);
   if (!removed.includes(id)) writeJson(KEY_REMOVED, [...removed, id]);
+}
+
+/** Apply a partial patch to any client. Works for both seeded and user-added. */
+export function updateClient(id: string, patch: Partial<Client>) {
+  const added: Client[] = readJson(KEY_ADDED, []);
+  const inAdded = added.find((c) => c.id === id);
+  if (inAdded) {
+    writeJson(KEY_ADDED, added.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    return;
+  }
+  const overrides: Record<string, Partial<Client>> = readJson(KEY_OVERRIDES, {});
+  overrides[id] = { ...overrides[id], ...patch };
+  writeJson(KEY_OVERRIDES, overrides);
 }
 
 export function useClients(): Client[] {

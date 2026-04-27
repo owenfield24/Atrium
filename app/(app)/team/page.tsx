@@ -28,7 +28,7 @@ export default function TeamPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Seats in use"     value={team.length} sub={`${active} active`} />
         <StatCard label="YTD GCI"          value={fmtCompact(ytdGCI)} sub="all agents"  highlight />
-        <StatCard label="Top producer"     value="Tyrone M."  sub="$184k YTD" />
+        <StatCard label="Top producer"     value="Jordan R."  sub="$184k YTD" />
         <StatCard label="Recruiting pipeline" value={recruits.length} sub="incl. Atrium Academy grads" />
       </div>
 

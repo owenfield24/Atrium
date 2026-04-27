@@ -7,12 +7,14 @@ export type PlanId = "starter" | "pro" | "agency" | "scale" | "enterprise";
 
 export interface UserProfile {
   email: string;
+  password: string;       // mock-only; in real auth this would never be persisted client-side
   firstName: string;
   lastName: string;
   phone: string;
   address: string;
   city: string;
   state: string;          // 2-letter US state code
+  zip: string;
   regionSlug: string;     // primary business region (matches lib/brief/regions.ts)
   regionLabel: string;
   role: Role;

@@ -53,7 +53,7 @@ function AccountPane() {
     <div className="grid lg:grid-cols-3 gap-5">
       <Card className="lg:col-span-2">
         <h3 className="text-sm font-semibold text-slate-900 mb-2">Personal</h3>
-        <Field label="Name"  value="Tyrone Mitchell" />
+        <Field label="Name"  value="Jordan Reeves" />
         <Field label="Email" value="sarah@atriumrealtytx.com" />
         <Field label="Phone" value="(817) 555-0142" />
         <Field label="License #" value="TX-#0719432" hint="Verified with TREC · April 2026" />
@@ -78,7 +78,7 @@ function BrokeragePane() {
         <Badge tone="emerald">Verified</Badge>
       </div>
       <Field label="Brokerage name" value="Atrium Realty Group" />
-      <Field label="Designated Broker" value="Tyrone Mitchell" />
+      <Field label="Designated Broker" value="Jordan Reeves" />
       <Field label="TREC Business Entity License" value="BE-#9217340" />
       <Field label="Address" value="3408 W 7th St, Fort Worth, TX 76107" />
       <Field label="Primary MLS" value="NTREIS" />

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { saveProfile, type Role, type PlanId, type UserProfile } from "@/lib/profile";
 import { REGIONS } from "@/lib/brief/regions";
 import { pricingTiers } from "@/lib/saas/data";
+import { formatPhone } from "@/lib/utils";
+import AddressInput from "@/components/ui/AddressInput";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -82,10 +84,12 @@ export default function SignupPage() {
   const [firstName, setFirstName]     = useState("");
   const [lastName, setLastName]       = useState("");
   const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
   const [phone, setPhone]             = useState("");
   const [address, setAddress]         = useState("");
   const [city, setCity]               = useState("");
   const [stateCode, setStateCode]     = useState("TX");
+  const [zip, setZip]                 = useState("");
   const [regionSlug, setRegionSlug]   = useState<string>("dfw");
 
   const [agencyName, setAgencyName]   = useState("");
@@ -122,7 +126,7 @@ export default function SignupPage() {
 
   const canAdvance: Record<Step, boolean> = {
     1: !!role,
-    2: !!firstName && !!lastName && /.+@.+\..+/.test(email) && phone.replace(/\D/g, "").length >= 10,
+    2: !!firstName && !!lastName && /.+@.+\..+/.test(email) && password.length >= 8 && phone.replace(/\D/g, "").length === 10,
     3: !!address && !!city && !!stateCode && !!regionSlug,
     4: role === "agent-solo"   ? !!licenseNumber && licenseConfirmed
      : role === "agent-agency" ? !!agencyName && !!agencyLicense && agencyAgentCount > 0
@@ -140,8 +144,8 @@ export default function SignupPage() {
     }
     const region = REGIONS[regionSlug];
     const profile: UserProfile = {
-      email, firstName, lastName, phone,
-      address, city, state: stateCode,
+      email, password, firstName, lastName, phone,
+      address, city, state: stateCode, zip,
       regionSlug, regionLabel: region?.label ?? regionSlug,
       role: role!, plan,
       emailVerified: true,
@@ -266,13 +270,26 @@ export default function SignupPage() {
               <StepWrap
                 eyebrow="Step 02 / 06"
                 title="The basics."
-                subtitle="Your name, the email we'll send your verification code to, and a phone number."
+                subtitle="Your name, email and password for sign-in, and a phone number we can verify against."
               >
                 <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="First name"><Input value={firstName} onChange={setFirstName} placeholder="Tyrone" autoFocus /></Field>
-                  <Field label="Last name"><Input value={lastName} onChange={setLastName} placeholder="Mitchell" /></Field>
+                  <Field label="First name"><Input value={firstName} onChange={setFirstName} placeholder="Alex" autoFocus /></Field>
+                  <Field label="Last name"><Input value={lastName} onChange={setLastName} placeholder="Reeves" /></Field>
                   <Field label="Email" className="md:col-span-2"><Input value={email} onChange={setEmail} placeholder="you@brokerage.com" type="email" /></Field>
-                  <Field label="Phone" className="md:col-span-2"><Input value={phone} onChange={setPhone} placeholder="(512) 555-0188" type="tel" /></Field>
+                  <Field label="Password" className="md:col-span-2">
+                    <Input value={password} onChange={setPassword} placeholder="At least 8 characters" type="password" />
+                    {password.length > 0 && password.length < 8 && (
+                      <p className="mt-1.5 text-[11px] text-amber-700 font-medium">Password must be at least 8 characters.</p>
+                    )}
+                  </Field>
+                  <Field label="Phone" className="md:col-span-2">
+                    <Input
+                      value={phone}
+                      onChange={(v) => setPhone(formatPhone(v))}
+                      placeholder="(512) 555-0188"
+                      type="tel"
+                    />
+                  </Field>
                 </div>
               </StepWrap>
             )}
@@ -284,10 +301,23 @@ export default function SignupPage() {
                 subtitle="We'll lead the daily Brief with your region and your national position relative to it."
               >
                 <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="Street address" className="md:col-span-2"><Input value={address} onChange={setAddress} placeholder="2300 Westlake Dr, Ste 400" /></Field>
+                  <Field label="Office address" className="md:col-span-2">
+                    <AddressInput
+                      value={address}
+                      onChange={setAddress}
+                      onPick={(s) => {
+                        setAddress(s.street);
+                        setCity(s.city);
+                        setStateCode(s.state);
+                        setZip(s.zip);
+                      }}
+                      placeholder="Start typing — we'll suggest matches"
+                    />
+                  </Field>
                   <Field label="City"><Input value={city} onChange={setCity} placeholder="Austin" /></Field>
                   <Field label="State"><Select value={stateCode} onChange={setStateCode} options={US_STATES.map((s) => ({ value: s, label: s }))} /></Field>
-                  <Field label="Primary metro (for the Brief)" className="md:col-span-2">
+                  <Field label="ZIP"><Input value={zip} onChange={(v) => setZip(v.replace(/\D/g, "").slice(0, 5))} placeholder="78746" /></Field>
+                  <Field label="Primary metro (for the Brief)">
                     <Select
                       value={regionSlug}
                       onChange={setRegionSlug}

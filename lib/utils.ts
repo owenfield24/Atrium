@@ -36,3 +36,12 @@ export function timeAgo(iso: string) {
 export function clsx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
 }
+
+/** Format a phone string into US-style "(XXX) XXX-XXXX" as the user types. */
+export function formatPhone(input: string): string {
+  const digits = input.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3)  return `(${digits}`;
+  if (digits.length <= 6)  return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
