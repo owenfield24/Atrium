@@ -150,14 +150,22 @@ export default function ClientDetailPage() {
         {isLandlord ? (
           <>
             <MetaTile label="Unit"        value={draft.unitNumber ?? draft.unitAddress ?? "—"} />
-            <MetaTile label="Monthly rent" value={draft.monthlyRent ? fmt(draft.monthlyRent) : "—"} mono />
+            <EditableTile label="Monthly rent">
+              <NumberField currency value={draft.monthlyRent ?? null} onCommit={(v) => patch({ monthlyRent: v ?? undefined })} placeholder="2,300" />
+            </EditableTile>
             <MetaTile label="Lease ends"   value={draft.leaseEnd ? new Date(draft.leaseEnd).toLocaleDateString() : "—"} mono />
             <MetaTile label="Status"       value={draft.applicationStatus ?? draft.status} />
           </>
         ) : (
           <>
             <MetaTile label="Type"         value={draft.type ?? "—"} />
-            <MetaTile label="Budget"       value={budgetDisplay} mono />
+            <EditableTile label="Budget">
+              <div className="flex items-center gap-1.5">
+                <NumberField currency value={draft.budgetMin ?? null} onCommit={(v) => patch({ budgetMin: v ?? undefined })} placeholder="Min" />
+                <span className="text-mute text-xs">–</span>
+                <NumberField currency value={draft.budgetMax ?? draft.budget ?? null} onCommit={(v) => patch({ budgetMax: v ?? undefined, budget: v })} placeholder="Max" />
+              </div>
+            </EditableTile>
             <MetaTile label="Source"       value={draft.source ?? "—"} />
             <MetaTile label="Last contact" value={draft.lastContact ? new Date(draft.lastContact).toLocaleDateString() : "—"} mono />
           </>
@@ -872,6 +880,18 @@ function MetaTile({ label, value, mono }: { label: string; value: string; mono?:
     <div className="rounded-xl bg-soft/60 border border-line/60 px-4 py-3">
       <p className="text-[10px] font-mono uppercase tracking-wider text-mute">{label}</p>
       <p className={`mt-1 text-base text-ink ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function EditableTile({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl bg-white border border-line/80 px-4 py-3 hover:border-ink/30 focus-within:border-ink transition-colors">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-mono uppercase tracking-wider text-mute">{label}</p>
+        <span className="text-[9px] font-mono text-mute/60">Editable</span>
+      </div>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }
