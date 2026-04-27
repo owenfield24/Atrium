@@ -183,6 +183,11 @@ export interface Client {
   evictionHistory?: boolean;
   housingHistory?: string;          // notes on prior rentals
   backgroundCheckCompleted?: boolean;
+
+  // Listings the user has explicitly removed from the client's top-5
+  // (kept persistent so they don't reappear next render). Restore from the
+  // "Hidden from matches" pill at the bottom of the matches section.
+  rejectedListings?: string[];
 }
 
 export interface MatchScore {

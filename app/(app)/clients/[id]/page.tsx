@@ -24,6 +24,7 @@ export default function ClientDetailPage() {
 
   const [draft, setDraft]     = useState<Client | null>(client ?? null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const debounce              = useRef<number | null>(null);
 
   // Sync draft when the underlying client changes (id flip OR external update
@@ -53,10 +54,29 @@ export default function ClientDetailPage() {
     debounce.current = window.setTimeout(apply, 350);
   };
 
+  // Detect whether the client has any signal we can match against. With no
+  // notes, no interaction log, no budget, and no preferences, the matcher
+  // would just return arbitrary listings — so we hide the section entirely.
+  const hasMatchSignal = !!draft && (
+    (draft.notes?.trim()?.length ?? 0) > 0 ||
+    (draft.activityLog?.length ?? 0) > 0 ||
+    draft.budget != null ||
+    draft.budgetMin != null ||
+    draft.budgetMax != null ||
+    (draft.preferences?.preferredCities?.length ?? 0) > 0 ||
+    (draft.preferences?.preferredZips?.length ?? 0) > 0 ||
+    (draft.preferences?.mustHaveFeatures?.length ?? 0) > 0 ||
+    (draft.preferences?.minBedrooms ?? 0) > 0 ||
+    (draft.preferences?.preferredTypes?.length ?? 0) > 0
+  );
+
   const matches: MatchResult[] = useMemo(() => {
-    if (!draft || isLandlord) return [];
-    return getTopMatches(draft, 5);
-  }, [draft, isLandlord]);
+    if (!draft || isLandlord || !hasMatchSignal) return [];
+    const rejected = new Set(draft.rejectedListings ?? []);
+    return getTopMatches(draft, 50)            // pull a wide pool…
+      .filter((m) => !rejected.has(m.listing.mlsId)) // drop user-rejected…
+      .slice(0, 5);                            // then trim to 5.
+  }, [draft, isLandlord, hasMatchSignal]);
 
   if (!client || !draft) {
     return (
@@ -74,7 +94,9 @@ export default function ClientDetailPage() {
 
   const budgetDisplay =
     draft.budgetMin && draft.budgetMax  ? `${fmt(draft.budgetMin)} – ${fmt(draft.budgetMax)}` :
-    draft.budgetMax ?? draft.budget     ? fmt((draft.budgetMax ?? draft.budget)!) :
+    draft.budgetMax                     ? fmt(draft.budgetMax) :
+    draft.budgetMin                     ? `${fmt(draft.budgetMin)}+` :
+    draft.budget                        ? fmt(draft.budget) :
                                           "—";
 
   return (
@@ -85,18 +107,17 @@ export default function ClientDetailPage() {
         </Link>
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-mono text-mute">
-            {savedAt ? `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Auto-saves as you type"}
+            {savedAt ? `Saved · ${savedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : "Auto-saves"}
           </span>
           <button
-            onClick={() => {
-              if (confirm(`Remove ${draft.firstName} ${draft.lastName}?`)) {
-                removeClient(draft.id);
-                router.push("/clients");
-              }
-            }}
-            className="text-xs font-medium text-mute hover:text-rose-600 px-3 py-1.5 rounded-full hover:bg-rose-50"
+            onClick={() => setEditMode((v) => !v)}
+            className={`text-xs font-medium px-4 py-1.5 rounded-full transition-colors ${
+              editMode
+                ? "bg-ink text-white hover:bg-mute"
+                : "bg-white border border-line/80 text-ink hover:border-ink/40"
+            }`}
           >
-            Remove
+            {editMode ? "Done editing" : "Edit client info"}
           </button>
         </div>
       </div>
@@ -146,47 +167,72 @@ export default function ClientDetailPage() {
       <div className={`mt-10 grid ${isLandlord ? "lg:grid-cols-1" : "lg:grid-cols-[1fr_360px]"} gap-10`}>
         <div>
           {/* ───── COMMON ───── */}
-          <Section eyebrow="Identity">
-            <Row label="First name"><TextField value={draft.firstName ?? ""} onCommit={(v) => patch({ firstName: v })} /></Row>
-            <Row label="Last name"><TextField value={draft.lastName ?? ""} onCommit={(v) => patch({ lastName: v })} /></Row>
-            <Row label="Email"><TextField type="email" value={draft.email ?? ""} onCommit={(v) => patch({ email: v })} placeholder="name@email.com" /></Row>
-            <Row label="Phone">
-              <TextField type="tel" value={draft.phone ?? ""} onCommit={(v) => patch({ phone: formatPhone(v) })} placeholder="(512) 555-0188" />
-            </Row>
+          {/* Identity locked unless editMode is on */}
+          <Section eyebrow="Identity" action={
+            !editMode && <span className="text-[10px] font-mono text-mute">Locked · click "Edit client info"</span>
+          }>
+            {editMode ? (
+              <>
+                <Row label="First name"><TextField value={draft.firstName ?? ""} onCommit={(v) => patch({ firstName: v })} /></Row>
+                <Row label="Last name"><TextField value={draft.lastName ?? ""} onCommit={(v) => patch({ lastName: v })} /></Row>
+                <Row label="Email"><TextField type="email" value={draft.email ?? ""} onCommit={(v) => patch({ email: v })} placeholder="name@email.com" /></Row>
+                <Row label="Phone">
+                  <TextField type="tel" value={draft.phone ?? ""} onCommit={(v) => patch({ phone: formatPhone(v) })} placeholder="(512) 555-0188" />
+                </Row>
+              </>
+            ) : (
+              <>
+                <ReadOnlyRow label="First name" value={draft.firstName} />
+                <ReadOnlyRow label="Last name"  value={draft.lastName}  />
+                <ReadOnlyRow label="Email"      value={draft.email}     />
+                <ReadOnlyRow label="Phone"      value={draft.phone} mono />
+              </>
+            )}
           </Section>
 
-          <Section eyebrow="Status & relationship">
-            <Row label="Status">
-              <SelectField
-                value={draft.status}
-                onCommit={(v) => v && patch({ status: v })}
-                options={isLandlord ? [
-                  { value: "Lead",          label: "Lead (interested)" },
-                  { value: "Active Buyer",  label: "Applicant" },
-                  { value: "Active Seller", label: "Active tenant" },
-                  { value: "Nurture",       label: "Nurture" },
-                  { value: "Closed",        label: "Past tenant" },
-                ] : [
-                  { value: "Lead",          label: "Lead" },
-                  { value: "Active Buyer",  label: "Active Buyer" },
-                  { value: "Active Seller", label: "Active Seller" },
-                  { value: "Nurture",       label: "Nurture" },
-                  { value: "Closed",        label: "Past client" },
-                ]}
-              />
-            </Row>
-            {!isLandlord && (
-              <Row label="Type">
-                <SelectField
-                  value={draft.type}
-                  onCommit={(v) => v && patch({ type: v })}
-                  options={[
-                    { value: "Buyer",  label: "Buyer"  },
-                    { value: "Seller", label: "Seller" },
-                    { value: "Both",   label: "Both"   },
-                  ]}
-                />
-              </Row>
+          <Section eyebrow="Status & relationship" action={
+            !editMode && <span className="text-[10px] font-mono text-mute">Status & type locked</span>
+          }>
+            {editMode ? (
+              <>
+                <Row label="Status">
+                  <SelectField
+                    value={draft.status}
+                    onCommit={(v) => v && patch({ status: v })}
+                    options={isLandlord ? [
+                      { value: "Lead",          label: "Lead (interested)" },
+                      { value: "Active Buyer",  label: "Applicant" },
+                      { value: "Active Seller", label: "Active tenant" },
+                      { value: "Nurture",       label: "Nurture" },
+                      { value: "Closed",        label: "Past tenant" },
+                    ] : [
+                      { value: "Lead",          label: "Lead" },
+                      { value: "Active Buyer",  label: "Active Buyer" },
+                      { value: "Active Seller", label: "Active Seller" },
+                      { value: "Nurture",       label: "Nurture" },
+                      { value: "Closed",        label: "Past client" },
+                    ]}
+                  />
+                </Row>
+                {!isLandlord && (
+                  <Row label="Type">
+                    <SelectField
+                      value={draft.type}
+                      onCommit={(v) => v && patch({ type: v })}
+                      options={[
+                        { value: "Buyer",  label: "Buyer"  },
+                        { value: "Seller", label: "Seller" },
+                        { value: "Both",   label: "Both"   },
+                      ]}
+                    />
+                  </Row>
+                )}
+              </>
+            ) : (
+              <>
+                <ReadOnlyRow label="Status" value={draft.status} />
+                {!isLandlord && <ReadOnlyRow label="Type" value={draft.type} />}
+              </>
             )}
             <Row label="Source"><TextField value={draft.source ?? ""} onCommit={(v) => patch({ source: v })} placeholder="Referral, Open House, Zillow…" /></Row>
             <Row label="Referred by"><TextField value={draft.referredBy ?? ""} onCommit={(v) => patch({ referredBy: v })} /></Row>
@@ -290,6 +336,9 @@ export default function ClientDetailPage() {
           )}
 
           {/* ───── AGENT-ONLY SECTIONS ───── */}
+          {isBuyer && (
+            <div id="buying-preferences" />
+          )}
           {isBuyer && (
             <Section eyebrow="Buying preferences" title="Used by the matcher.">
               <Row label="Budget">
@@ -551,23 +600,37 @@ export default function ClientDetailPage() {
           </Section>
         </div>
 
-        {/* RIGHT COLUMN — agent only: top 5 matches */}
-        {!isLandlord && (
+        {/* RIGHT COLUMN — agent only, only when there's signal to match against */}
+        {!isLandlord && hasMatchSignal && (
           <aside className="lg:sticky lg:top-10 self-start">
-            <Section eyebrow="Top 5 matches" title="Listings ranked against this profile.">
+            <Section
+              eyebrow="Top 5 matches"
+              title="Listings ranked against this profile."
+              action={<Link href="#buying-preferences" className="text-[10px] font-mono text-amber-700 hover:text-ink">Edit criteria →</Link>}
+            >
               {matches.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-mute">
-                  Add buying preferences to see matches.
+                  No active matches right now. Tweak the buying preferences or notes.
                 </div>
               ) : (
                 <ol className="space-y-2">
                   {matches.map((m, i) => {
                     const sLabel = scoreLabel(m.total);
                     return (
-                      <li key={m.listing.mlsId}>
+                      <li key={m.listing.mlsId} className="group relative">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (confirm(`Remove ${m.listing.address} from this list?`)) {
+                              patch({ rejectedListings: [...(draft.rejectedListings ?? []), m.listing.mlsId] });
+                            }
+                          }}
+                          title="Remove from this list"
+                          className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full bg-white text-mute hover:text-rose-600 border border-line hover:border-rose-300 text-sm leading-none flex items-center justify-center"
+                        >×</button>
                         <Link
                           href={`/listings/${m.listing.mlsId}`}
-                          className="block rounded-xl border border-line bg-white p-4 hover:border-ink/40 hover:shadow-md hover:shadow-amber-200/30 transition cursor-pointer"
+                          className="block rounded-xl border border-line bg-white p-4 pr-9 hover:border-ink/40 hover:shadow-md hover:shadow-amber-200/30 transition cursor-pointer"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
@@ -599,10 +662,63 @@ export default function ClientDetailPage() {
                   })}
                 </ol>
               )}
+
+              {(draft.rejectedListings?.length ?? 0) > 0 && (
+                <details className="mt-3 rounded-xl border border-line bg-soft/40 px-3 py-2">
+                  <summary className="cursor-pointer text-[11px] font-mono text-mute hover:text-ink list-none flex items-center justify-between">
+                    <span>Hidden from matches ({draft.rejectedListings!.length})</span>
+                    <span>+</span>
+                  </summary>
+                  <ul className="mt-2 space-y-1">
+                    {draft.rejectedListings!.map((id) => (
+                      <li key={id} className="flex items-center justify-between gap-2 text-xs text-mute">
+                        <span className="font-mono">{id}</span>
+                        <button
+                          onClick={() => patch({ rejectedListings: (draft.rejectedListings ?? []).filter((x) => x !== id) })}
+                          className="text-[10px] text-amber-700 hover:underline"
+                        >
+                          Restore
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </Section>
           </aside>
         )}
       </div>
+
+      {/* DANGER ZONE — bottom of page */}
+      <div className="mt-16 pt-8 border-t border-line">
+        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-mute">Danger zone</p>
+        <div className="mt-3 flex items-center justify-between flex-wrap gap-3 rounded-xl border border-rose-100 bg-rose-50/40 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">Remove this {isLandlord ? "tenant" : "client"}</p>
+            <p className="text-xs text-mute mt-0.5">All notes, interactions, photo, and preferences will be deleted.</p>
+          </div>
+          <button
+            onClick={() => {
+              if (confirm(`Permanently remove ${draft.firstName} ${draft.lastName}? This can't be undone.`)) {
+                removeClient(draft.id);
+                router.push("/clients");
+              }
+            }}
+            className="text-sm font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-100 px-5 py-2 rounded-full"
+          >
+            Remove {isLandlord ? "tenant" : "client"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReadOnlyRow({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] items-baseline gap-3 py-2">
+      <p className="text-[11px] text-mute font-medium">{label}</p>
+      <p className={`text-sm text-ink ${mono ? "font-mono" : ""}`}>{value || <span className="text-mute/60">—</span>}</p>
     </div>
   );
 }

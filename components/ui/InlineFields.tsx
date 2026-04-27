@@ -44,7 +44,7 @@ export function Row({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-/** Debounced text/email input. Calls onCommit after the user stops typing. */
+/** Text input. Commits on every keystroke so consumers update instantly. */
 export function TextField({
   value, onCommit, placeholder, type = "text", multiline,
 }: {
@@ -54,21 +54,21 @@ export function TextField({
   type?: "text" | "email" | "tel" | "url";
   multiline?: boolean;
 }) {
-  const [local, setLocal] = useState(value);
-  const debounce = useRef<number | null>(null);
+  const [local, setLocal]   = useState(value);
+  const [focused, setFocus] = useState(false);
 
-  useEffect(() => { setLocal(value); }, [value]);
+  // Pull external updates in only when the user isn't actively editing,
+  // so the caret never jumps mid-type.
+  useEffect(() => { if (!focused) setLocal(value); }, [value, focused]);
 
-  const change = (next: string) => {
-    setLocal(next);
-    if (debounce.current) window.clearTimeout(debounce.current);
-    debounce.current = window.setTimeout(() => onCommit(next), 400);
-  };
+  const change = (next: string) => { setLocal(next); onCommit(next); };
 
   if (multiline) {
     return (
       <textarea
         value={local}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
         onChange={(e) => change(e.target.value)}
         placeholder={placeholder}
         rows={2}
@@ -80,6 +80,8 @@ export function TextField({
     <input
       type={type}
       value={local}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
       onChange={(e) => change(e.target.value)}
       placeholder={placeholder}
       className={SHARED}
@@ -87,7 +89,10 @@ export function TextField({
   );
 }
 
-/** Numeric input with optional currency formatting. */
+/** Numeric input with optional currency formatting. Accepts digits, dots,
+ *  and commas. Reformats with thousand separators on blur. Commits the
+ *  parsed number on every keystroke so dependent UI (budget tile, top-5
+ *  matches) updates live. */
 export function NumberField({
   value, onCommit, placeholder, currency,
 }: {
@@ -96,32 +101,42 @@ export function NumberField({
   placeholder?: string;
   currency?: boolean;
 }) {
-  const [local, setLocal] = useState<string>(value != null ? String(value) : "");
-  const debounce = useRef<number | null>(null);
+  const formatted = (n: number | null | undefined) =>
+    n == null ? "" : n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  const [local, setLocal]   = useState<string>(formatted(value));
+  const [focused, setFocus] = useState(false);
 
-  useEffect(() => { setLocal(value != null ? String(value) : ""); }, [value]);
+  useEffect(() => { if (!focused) setLocal(formatted(value)); }, [value, focused]);
 
   const change = (raw: string) => {
-    const cleaned = raw.replace(/[^0-9.]/g, "");
-    setLocal(cleaned);
-    if (debounce.current) window.clearTimeout(debounce.current);
-    debounce.current = window.setTimeout(() => {
-      onCommit(cleaned === "" ? null : parseFloat(cleaned));
-    }, 400);
+    // Accept digits, dots, commas. Strip commas before parsing.
+    const sanitized = raw.replace(/[^0-9.,]/g, "");
+    setLocal(sanitized);
+    const num = parseFloat(sanitized.replace(/,/g, ""));
+    onCommit(isNaN(num) ? null : num);
+  };
+
+  const onBlur = () => {
+    setFocus(false);
+    const num = parseFloat(local.replace(/,/g, ""));
+    if (!isNaN(num)) setLocal(num.toLocaleString("en-US", { maximumFractionDigits: 4 }));
+    else if (local === "") setLocal("");
   };
 
   return (
     <div className="relative">
       {currency && (
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-mute font-mono text-sm pointer-events-none">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-mute font-mono text-sm pointer-events-none">$</span>
       )}
       <input
         type="text"
         inputMode="decimal"
         value={local}
+        onFocus={() => setFocus(true)}
+        onBlur={onBlur}
         onChange={(e) => change(e.target.value)}
         placeholder={placeholder}
-        className={`${SHARED} font-mono ${currency ? "pl-5" : ""}`}
+        className={`${SHARED} font-mono ${currency ? "pl-7" : ""}`}
       />
     </div>
   );
