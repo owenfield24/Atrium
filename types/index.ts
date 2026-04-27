@@ -63,6 +63,46 @@ export interface Client {
   createdAt: string;
   source: string;
   preferences?: ClientPreferences;
+
+  // — Extended profile fields (all optional, drawer-editable) —
+  // Communication
+  preferredContact?: "Email" | "Phone" | "Text" | "In-person";
+  bestTimeToContact?: string;
+  lastContactMethod?: "Email" | "Phone" | "Text" | "In-person";
+  nextFollowUp?: string;        // ISO date
+
+  // Buying details (used when type is Buyer or Both)
+  budgetMin?: number;
+  budgetMax?: number;
+  moveInTimeline?: string;      // "0-3 months", "Just looking", etc.
+  motivation?: string;          // why they're moving
+  schoolDistricts?: string[];
+
+  // Pre-approval
+  preApprovalLender?: string;
+  preApprovalAmount?: number;
+  preApprovalExpires?: string;  // ISO date
+
+  // Selling details (used when type is Seller or Both)
+  sellingAddress?: string;
+  sellingTargetPrice?: number;
+  sellingMotivation?: string;
+  sellingTimeline?: string;
+
+  // Family / relationship
+  spouseName?: string;
+  children?: { name: string; age?: number }[];
+  occupation?: string;
+  employer?: string;
+  referredBy?: string;
+
+  // Important dates
+  birthday?: string;            // YYYY-MM-DD
+  anniversary?: string;
+  contractDate?: string;
+
+  // Free-form organization
+  tags?: string[];
 }
 
 export interface MatchScore {
